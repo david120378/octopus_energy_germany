@@ -147,7 +147,7 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
-### 1.1.0
+### 0.2.0
 - Tarifdaten (Strom & Gas): Arbeitspreis, Grundgebühr, Tarifname, Gültigkeitszeitraum
 - Gaskostenzeiten und Gasverbrauch
 - Einspeisedaten (PV/Export)
@@ -161,5 +161,5 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 - Anzahl Rechnungen
 - 30 HA Sensoren (vorher: 5)
 
-### 1.0.0
+### 0.1.0
 - Erstveröffentlichung

@@ -147,6 +147,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.2.1
+- Bugfix: Dockerfile `--break-system-packages` für Alpine Linux pip-Kompatibilität
+
 ### 0.2.0
 - Tarifdaten (Strom & Gas): Arbeitspreis, Grundgebühr, Tarifname, Gültigkeitszeitraum
 - Gaskostenzeiten und Gasverbrauch

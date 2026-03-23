@@ -37,17 +37,30 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/account/ledger/electricity_ledger` | Strom-Ledger Saldo EUR |
 | `octopus_energy/account/details` | Vollständige Kontodaten (JSON) |
 
-### Verbrauch & Kosten
+### Verbrauch (kWh)
 | Topic | Beschreibung |
 |-------|-------------|
-| `octopus_energy/consumption/today_kwh` | Stromverbrauch heute (kWh) |
-| `octopus_energy/consumption/yesterday_kwh` | Stromverbrauch gestern (kWh) |
-| `octopus_energy/consumption/current_month_kwh` | Stromverbrauch aktueller Monat (kWh) |
-| `octopus_energy/consumption/last_month_kwh` | Stromverbrauch letzter Monat (kWh) |
-| `octopus_energy/consumption/today_cost_eur` | Stromkosten heute (EUR inkl. MwSt) |
-| `octopus_energy/consumption/yesterday_cost_eur` | Stromkosten gestern (EUR inkl. MwSt) |
-| `octopus_energy/consumption/current_month_cost_eur` | Stromkosten aktueller Monat (EUR inkl. MwSt) |
-| `octopus_energy/consumption/last_month_cost_eur` | Stromkosten letzter Monat (EUR inkl. MwSt) |
+| `octopus_energy/consumption/today` | Stromverbrauch heute (kWh) |
+| `octopus_energy/consumption/yesterday` | Stromverbrauch gestern (kWh) |
+| `octopus_energy/consumption/current_week` | Stromverbrauch aktuelle Woche (kWh) |
+| `octopus_energy/consumption/last_week` | Stromverbrauch letzte Woche (kWh) |
+| `octopus_energy/consumption/current_month` | Stromverbrauch aktueller Monat (kWh) |
+| `octopus_energy/consumption/last_month` | Stromverbrauch letzter Monat (kWh) |
+| `octopus_energy/consumption/current_year` | Stromverbrauch aktuelles Jahr (kWh) |
+| `octopus_energy/consumption/last_year` | Stromverbrauch letztes Jahr (kWh) |
+
+### Kosten (EUR inkl. MwSt)
+| Topic | Beschreibung |
+|-------|-------------|
+| `octopus_energy/cost/today` | Stromkosten heute (EUR) |
+| `octopus_energy/cost/yesterday` | Stromkosten gestern (EUR) |
+| `octopus_energy/cost/current_week` | Stromkosten aktuelle Woche (EUR) |
+| `octopus_energy/cost/last_week` | Stromkosten letzte Woche (EUR) |
+| `octopus_energy/cost/current_month` | Stromkosten aktueller Monat (EUR) |
+| `octopus_energy/cost/last_month` | Stromkosten letzter Monat (EUR) |
+| `octopus_energy/cost/current_year` | Stromkosten aktuelles Jahr (EUR) |
+| `octopus_energy/cost/last_year` | Stromkosten letztes Jahr (EUR) |
+| `octopus_energy/tariff/unit_rate` | Arbeitspreis (EUR/kWh, aus Verbrauchsdaten berechnet) |
 
 ### Rechnungen
 | Topic | Beschreibung |
@@ -75,11 +88,12 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 
 ## Home Assistant Sensoren (MQTT Discovery)
 
-Das Add-on registriert automatisch **20 Sensoren** in Home Assistant:
+Das Add-on registriert automatisch **28 Sensoren** in Home Assistant:
 
 - Konto: Kontostand, Überfälliger Betrag
-- Verbrauch: Heute/Gestern/Aktueller Monat/Letzter Monat (kWh)
-- Kosten: Heute/Gestern/Aktueller Monat/Letzter Monat (EUR inkl. MwSt)
+- Verbrauch: Heute/Gestern/Aktuelle Woche/Letzte Woche/Aktueller Monat/Letzter Monat/Aktuelles Jahr/Letztes Jahr (kWh)
+- Kosten: Heute/Gestern/Aktuelle Woche/Letzte Woche/Aktueller Monat/Letzter Monat/Aktuelles Jahr/Letztes Jahr (EUR inkl. MwSt)
+- Tarif: Arbeitspreis (EUR/kWh)
 - Rechnungen: Brutto/Netto, Datum (Von/Bis), Anzahl, PDF-Link
 - Zahlungen: Letzter Betrag & Datum
 - Letzter Abruf Zeitstempel
@@ -94,6 +108,12 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.5.0
+- Verbrauch & Kosten für alle Zeiträume: Tag, Woche, Monat, Jahr (jeweils aktuell + vorherig)
+- Arbeitspreis-Sensor (EUR/kWh, aus Tagesverbrauch berechnet)
+- Datenabruf jetzt 400 Tage (für vollständige Jahresauswertung)
+- 28 HA Sensoren (vorher: 20)
 
 ### 0.4.0
 - Verbrauchsdaten via `property(id) { measurements(...) }` GraphQL-Endpoint

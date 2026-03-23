@@ -255,7 +255,7 @@ class OctopusEnergyClient:
         edges = data.get("account", {}).get("bills", {}).get("edges", [])
         return [edge["node"] for edge in edges]
 
-    def get_measurements(self, days_back: int = 30, frequency: str = "DAY_INTERVAL") -> list:
+    def get_measurements(self, days_back: int = 400, frequency: str = "DAY_INTERVAL") -> list:
         if not self.property_id:
             raise RuntimeError("Property ID nicht verfügbar – Kontodaten zuerst abrufen.")
 
@@ -314,7 +314,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.4.0",
+        "sw_version": "0.5.0",
     }
 
     sensors = [
@@ -325,6 +325,56 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         {"name": "Octopus Überfälliger Betrag", "unique_id": "octopus_overdue_balance",
          "state_topic": f"{topic_prefix}/account/overdue_balance", "unit_of_measurement": "EUR",
          "device_class": "monetary", "icon": "mdi:cash-alert"},
+        # Consumption
+        {"name": "Octopus Strom Verbrauch Heute", "unique_id": "octopus_consumption_today",
+         "state_topic": f"{topic_prefix}/consumption/today", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt"},
+        {"name": "Octopus Strom Verbrauch Gestern", "unique_id": "octopus_consumption_yesterday",
+         "state_topic": f"{topic_prefix}/consumption/yesterday", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
+        {"name": "Octopus Strom Verbrauch Aktuelle Woche", "unique_id": "octopus_consumption_current_week",
+         "state_topic": f"{topic_prefix}/consumption/current_week", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt"},
+        {"name": "Octopus Strom Verbrauch Letzte Woche", "unique_id": "octopus_consumption_last_week",
+         "state_topic": f"{topic_prefix}/consumption/last_week", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
+        {"name": "Octopus Strom Verbrauch Aktueller Monat", "unique_id": "octopus_consumption_current_month",
+         "state_topic": f"{topic_prefix}/consumption/current_month", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt"},
+        {"name": "Octopus Strom Verbrauch Letzter Monat", "unique_id": "octopus_consumption_last_month",
+         "state_topic": f"{topic_prefix}/consumption/last_month", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
+        {"name": "Octopus Strom Verbrauch Aktuelles Jahr", "unique_id": "octopus_consumption_current_year",
+         "state_topic": f"{topic_prefix}/consumption/current_year", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt"},
+        {"name": "Octopus Strom Verbrauch Letztes Jahr", "unique_id": "octopus_consumption_last_year",
+         "state_topic": f"{topic_prefix}/consumption/last_year", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
+        # Cost (incl. tax)
+        {"name": "Octopus Strom Kosten Heute", "unique_id": "octopus_cost_today",
+         "state_topic": f"{topic_prefix}/cost/today", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Gestern", "unique_id": "octopus_cost_yesterday",
+         "state_topic": f"{topic_prefix}/cost/yesterday", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Aktuelle Woche", "unique_id": "octopus_cost_current_week",
+         "state_topic": f"{topic_prefix}/cost/current_week", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Letzte Woche", "unique_id": "octopus_cost_last_week",
+         "state_topic": f"{topic_prefix}/cost/last_week", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Aktueller Monat", "unique_id": "octopus_cost_current_month",
+         "state_topic": f"{topic_prefix}/cost/current_month", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Letzter Monat", "unique_id": "octopus_cost_last_month",
+         "state_topic": f"{topic_prefix}/cost/last_month", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Aktuelles Jahr", "unique_id": "octopus_cost_current_year",
+         "state_topic": f"{topic_prefix}/cost/current_year", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Letztes Jahr", "unique_id": "octopus_cost_last_year",
+         "state_topic": f"{topic_prefix}/cost/last_year", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
         # Bills
         {"name": "Octopus Letzte Rechnung (Brutto)", "unique_id": "octopus_last_bill_gross",
          "state_topic": f"{topic_prefix}/bills/latest/gross_total", "unit_of_measurement": "EUR",
@@ -342,32 +392,6 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
          "state_topic": f"{topic_prefix}/bills/latest/pdf_url", "icon": "mdi:file-pdf-box"},
         {"name": "Octopus Anzahl Rechnungen", "unique_id": "octopus_bill_count",
          "state_topic": f"{topic_prefix}/bills/count", "icon": "mdi:counter"},
-        # Consumption
-        {"name": "Octopus Strom Verbrauch Heute", "unique_id": "octopus_electricity_today",
-         "state_topic": f"{topic_prefix}/consumption/today", "unit_of_measurement": "kWh",
-         "device_class": "energy", "state_class": "total_increasing", "icon": "mdi:lightning-bolt"},
-        {"name": "Octopus Strom Verbrauch Gestern", "unique_id": "octopus_electricity_yesterday",
-         "state_topic": f"{topic_prefix}/consumption/yesterday", "unit_of_measurement": "kWh",
-         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
-        {"name": "Octopus Strom Verbrauch Aktueller Monat", "unique_id": "octopus_electricity_current_month",
-         "state_topic": f"{topic_prefix}/consumption/current_month", "unit_of_measurement": "kWh",
-         "device_class": "energy", "icon": "mdi:lightning-bolt"},
-        {"name": "Octopus Strom Verbrauch Letzter Monat", "unique_id": "octopus_electricity_last_month",
-         "state_topic": f"{topic_prefix}/consumption/last_month", "unit_of_measurement": "kWh",
-         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
-        # Cost (from API, incl. tax)
-        {"name": "Octopus Strom Kosten Heute", "unique_id": "octopus_cost_today",
-         "state_topic": f"{topic_prefix}/cost/today", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Gestern", "unique_id": "octopus_cost_yesterday",
-         "state_topic": f"{topic_prefix}/cost/yesterday", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Aktueller Monat", "unique_id": "octopus_cost_current_month",
-         "state_topic": f"{topic_prefix}/cost/current_month", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Letzter Monat", "unique_id": "octopus_cost_last_month",
-         "state_topic": f"{topic_prefix}/cost/last_month", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
         # Payments
         {"name": "Octopus Letzte Zahlung", "unique_id": "octopus_last_payment",
          "state_topic": f"{topic_prefix}/payments/latest/amount", "unit_of_measurement": "EUR",
@@ -378,6 +402,10 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         {"name": "Octopus Letzter Abruf", "unique_id": "octopus_last_updated",
          "state_topic": f"{topic_prefix}/last_updated", "device_class": "timestamp",
          "icon": "mdi:clock-check"},
+        # Tariff info
+        {"name": "Octopus Arbeitspreis", "unique_id": "octopus_unit_rate",
+         "state_topic": f"{topic_prefix}/tariff/unit_rate", "unit_of_measurement": "EUR/kWh",
+         "icon": "mdi:tag"},
     ]
 
     for sensor in sensors:
@@ -392,23 +420,34 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def sum_kwh(entries: list, date_prefix: str) -> float:
-    return round(sum(
-        float(e.get("value", 0))
-        for e in entries
-        if e.get("startAt", "").startswith(date_prefix)
-    ), 3)
+def sum_kwh(entries: list, date_keys) -> float:
+    """Sum kWh for entries whose startAt date matches date_keys (prefix str or set of YYYY-MM-DD)."""
+    if isinstance(date_keys, str):
+        match = lambda s: s.startswith(date_keys)
+    else:
+        match = lambda s: s[:10] in date_keys
+    return round(sum(float(e.get("value", 0)) for e in entries if match(e.get("startAt", ""))), 3)
 
-def sum_cost(entries: list, date_prefix: str) -> float:
+
+def sum_cost(entries: list, date_keys) -> float:
+    """Sum cost incl. tax (EUR) for entries whose startAt date matches date_keys."""
+    if isinstance(date_keys, str):
+        match = lambda s: s.startswith(date_keys)
+    else:
+        match = lambda s: s[:10] in date_keys
     total = 0.0
     for e in entries:
-        if not e.get("startAt", "").startswith(date_prefix):
+        if not match(e.get("startAt", "")):
             continue
         for stat in e.get("metaData", {}).get("statistics", []):
             incl = stat.get("costInclTax", {})
             if incl.get("estimatedAmount") is not None:
                 total += float(incl["estimatedAmount"])
-    return round(total / 100, 4)
+    return round(total / 100, 2)
+
+
+def week_dates(monday: datetime) -> set:
+    return {(monday + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)}
 
 
 def try_fetch(label: str, fn):
@@ -426,11 +465,19 @@ def try_fetch(label: str, fn):
 def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> None:
     p = mqtt_pub.publish
     now = datetime.now()
-    today = now.strftime("%Y-%m-%d")
-    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    today_str = now.strftime("%Y-%m-%d")
+    yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # Week: Monday-based
+    cur_mon = now - timedelta(days=now.weekday())
+    last_mon = cur_mon - timedelta(days=7)
+    cur_week = week_dates(cur_mon)
+    last_week = week_dates(last_mon)
+
     cur_month = now.strftime("%Y-%m")
-    last_mo = (now.replace(day=1) - timedelta(days=1))
-    last_month = last_mo.strftime("%Y-%m")
+    last_month = (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    cur_year = now.strftime("%Y")
+    last_year = str(now.year - 1)
 
     try:
         client.ensure_authenticated()
@@ -451,44 +498,40 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
     # -- Measurements (consumption + cost) -----------------------------------
     measurements = try_fetch(
         "Verbrauchsdaten",
-        lambda: client.get_measurements(days_back=60, frequency="DAY_INTERVAL"),
+        lambda: client.get_measurements(days_back=400, frequency="DAY_INTERVAL"),
     )
     if measurements:
-        p("consumption/all", measurements)
+        # Consumption (kWh)
+        p("consumption/today",        sum_kwh(measurements, today_str))
+        p("consumption/yesterday",    sum_kwh(measurements, yesterday_str))
+        p("consumption/current_week", sum_kwh(measurements, cur_week))
+        p("consumption/last_week",    sum_kwh(measurements, last_week))
+        p("consumption/current_month",sum_kwh(measurements, cur_month))
+        p("consumption/last_month",   sum_kwh(measurements, last_month))
+        p("consumption/current_year", sum_kwh(measurements, cur_year))
+        p("consumption/last_year",    sum_kwh(measurements, last_year))
 
-        kwh_today = sum_kwh(measurements, today)
-        kwh_yesterday = sum_kwh(measurements, yesterday)
-        kwh_cur_month = sum(
-            float(e.get("value", 0))
-            for e in measurements if e.get("startAt", "").startswith(cur_month)
-        )
-        kwh_last_month = sum(
-            float(e.get("value", 0))
-            for e in measurements if e.get("startAt", "").startswith(last_month)
-        )
-        p("consumption/today", round(kwh_today, 3))
-        p("consumption/yesterday", round(kwh_yesterday, 3))
-        p("consumption/current_month", round(kwh_cur_month, 3))
-        p("consumption/last_month", round(kwh_last_month, 3))
+        # Cost (EUR incl. tax)
+        p("cost/today",         sum_cost(measurements, today_str))
+        p("cost/yesterday",     sum_cost(measurements, yesterday_str))
+        p("cost/current_week",  sum_cost(measurements, cur_week))
+        p("cost/last_week",     sum_cost(measurements, last_week))
+        p("cost/current_month", sum_cost(measurements, cur_month))
+        p("cost/last_month",    sum_cost(measurements, last_month))
+        p("cost/current_year",  sum_cost(measurements, cur_year))
+        p("cost/last_year",     sum_cost(measurements, last_year))
 
-        cost_today = sum_cost(measurements, today)
-        cost_yesterday = sum_cost(measurements, yesterday)
-        cost_cur_month = sum(
-            sum_cost([e], e.get("startAt", "")[:7])
-            for e in measurements if e.get("startAt", "").startswith(cur_month)
-        )
-        cost_last_month = sum(
-            sum_cost([e], e.get("startAt", "")[:7])
-            for e in measurements if e.get("startAt", "").startswith(last_month)
-        )
-        p("cost/today", round(cost_today, 4))
-        p("cost/yesterday", round(cost_yesterday, 4))
-        p("cost/current_month", round(cost_cur_month, 2))
-        p("cost/last_month", round(cost_last_month, 2))
+        # Derive unit rate from today's cost/consumption if available
+        kwh_today = sum_kwh(measurements, today_str)
+        cost_today = sum_cost(measurements, today_str)
+        if kwh_today > 0:
+            p("tariff/unit_rate", round(cost_today / kwh_today, 4))
 
         log.info(
-            "Verbrauch: Heute %.3f kWh (%.2f EUR), Monat %.3f kWh (%.2f EUR)",
-            kwh_today, cost_today, kwh_cur_month, cost_cur_month,
+            "Verbrauch: Heute %.3f kWh (%.2f EUR) | Monat %.3f kWh (%.2f EUR) | Jahr %.3f kWh (%.2f EUR)",
+            kwh_today, cost_today,
+            sum_kwh(measurements, cur_month), sum_cost(measurements, cur_month),
+            sum_kwh(measurements, cur_year), sum_cost(measurements, cur_year),
         )
 
     # -- Payments ------------------------------------------------------------

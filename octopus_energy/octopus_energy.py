@@ -61,42 +61,20 @@ query Payments($accountNumber: String!) {
 }
 """
 
-QUERY_METER_INFO = """
-query MeterInfo($accountNumber: String!) {
-  account(accountNumber: $accountNumber) {
-    properties {
-      electricityMalos {
-        meter {
-          serialNumber
-          isExport
-          smartDevices {
-            deviceId
-          }
-        }
-      }
-    }
-  }
-}
-"""
-
 QUERY_METER_CONSUMPTION_DAILY = """
 query ConsumptionDaily($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
     properties {
       electricityMalos {
-        meter {
-          serialNumber
-          isExport
-          consumption(
-            startDate: $startDate
-            endDate: $endDate
-            grouping: DAY
-          ) {
-            startAt
-            endAt
-            value
-            unit
-          }
+        consumption(
+          startDate: $startDate
+          endDate: $endDate
+          grouping: DAY
+        ) {
+          startAt
+          endAt
+          value
+          unit
         }
       }
     }
@@ -109,19 +87,15 @@ query ConsumptionHalfHour($accountNumber: String!, $startDate: String!, $endDate
   account(accountNumber: $accountNumber) {
     properties {
       electricityMalos {
-        meter {
-          serialNumber
-          isExport
-          consumption(
-            startDate: $startDate
-            endDate: $endDate
-            grouping: HALF_HOUR
-          ) {
-            startAt
-            endAt
-            value
-            unit
-          }
+        consumption(
+          startDate: $startDate
+          endDate: $endDate
+          grouping: HALF_HOUR
+        ) {
+          startAt
+          endAt
+          value
+          unit
         }
       }
     }
@@ -134,19 +108,15 @@ query ConsumptionMonthly($accountNumber: String!, $startDate: String!, $endDate:
   account(accountNumber: $accountNumber) {
     properties {
       electricityMalos {
-        meter {
-          serialNumber
-          isExport
-          consumption(
-            startDate: $startDate
-            endDate: $endDate
-            grouping: MONTH
-          ) {
-            startAt
-            endAt
-            value
-            unit
-          }
+        consumption(
+          startDate: $startDate
+          endDate: $endDate
+          grouping: MONTH
+        ) {
+          startAt
+          endAt
+          value
+          unit
         }
       }
     }
@@ -157,7 +127,7 @@ query ConsumptionMonthly($accountNumber: String!, $startDate: String!, $endDate:
 QUERY_BILLS = """
 query Bills($accountNumber: String!) {
   account(accountNumber: $accountNumber) {
-    bills {
+    bills(first: 10) {
       edges {
         node {
           id
@@ -280,10 +250,6 @@ class OctopusEnergyClient:
         edges = data.get("account", {}).get("payments", {}).get("edges", [])
         return [e["node"] for e in edges]
 
-    def get_meter_info(self) -> dict:
-        data = self._query(QUERY_METER_INFO, {"accountNumber": self.account_number})
-        return data.get("account", {})
-
     def get_consumption_daily(self, days_back: int = 365) -> dict:
         end_date = datetime.now().strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
@@ -319,13 +285,9 @@ class OctopusEnergyClient:
     def _parse_consumption(self, data: dict) -> dict:
         result = {"electricity": [], "electricity_export": []}
         for prop in data.get("account", {}).get("properties", []):
-            for mp in prop.get("electricityMalos", []):
-                meter = mp.get("meter", {})
-                if meter:
-                    serial = meter.get("serialNumber", "unknown")
-                    key = "electricity_export" if meter.get("isExport") else "electricity"
-                    for entry in meter.get("consumption", []):
-                        result[key].append({"serial_number": serial, **entry})
+            for malo in prop.get("electricityMalos", []):
+                for entry in malo.get("consumption", []):
+                    result["electricity"].append(entry)
         return result
 
 
@@ -366,7 +328,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.2.6",
+        "sw_version": "0.2.7",
     }
 
     sensors = [
@@ -428,9 +390,6 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         {"name": "Octopus Strom Einspeisung Gestern", "unique_id": "octopus_electricity_export_yesterday",
          "state_topic": f"{topic_prefix}/consumption/electricity_export/yesterday",
          "unit_of_measurement": "kWh", "device_class": "energy", "icon": "mdi:solar-power"},
-        # Meter
-        {"name": "Octopus Stromzähler Seriennummer", "unique_id": "octopus_electricity_meter_serial",
-         "state_topic": f"{topic_prefix}/meter/electricity/serial_number", "icon": "mdi:counter"},
         # Payments
         {"name": "Octopus Letzte Zahlung", "unique_id": "octopus_last_payment",
          "state_topic": f"{topic_prefix}/payments/latest/amount", "unit_of_measurement": "EUR",
@@ -507,17 +466,6 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         for ledger in account.get("ledgers", []):
             p(f"account/ledger/{ledger.get('ledgerType','').lower()}", round(ledger.get("balance", 0) / 100, 2))
         log.info("Kontodaten veröffentlicht. Kontostand: %.2f EUR", account.get("balance", 0) / 100)
-
-    # -- Meter info ----------------------------------------------------------
-    meter_info = try_fetch("Zählerdaten", client.get_meter_info)
-    if meter_info:
-        for prop in meter_info.get("properties", []):
-            elec_malos = prop.get("electricityMalos", [])
-            if elec_malos:
-                meter = elec_malos[0].get("meter", {})
-                if meter:
-                    p("meter/electricity/serial_number", meter.get("serialNumber", ""))
-                    p("meter/electricity/is_smart", bool(meter.get("smartDevices")))
 
     # -- Payments ------------------------------------------------------------
     payments = try_fetch("Zahlungen", client.get_payments)

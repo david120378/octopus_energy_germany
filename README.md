@@ -132,6 +132,11 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.2.7
+- Bugfix: `consumption` direkt auf `electricityMalos` (nicht auf `meter`)
+- Bugfix: `bills(first: 10)` Pagination hinzugefügt
+- Meter-Info-Query entfernt (Felder nicht im deutschen Schema verfügbar)
+
 ### 0.2.6
 - Gas komplett entfernt (Queries, Sensoren, MQTT Topics, Parsing)
 

@@ -47,12 +47,6 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/tariff/electricity/valid_from` | Tarif gültig ab |
 | `octopus_energy/tariff/electricity/valid_to` | Tarif gültig bis |
 
-### Tarif – Gas
-| Topic | Beschreibung |
-|-------|-------------|
-| `octopus_energy/tariff/gas/display_name` | Tarifname |
-| `octopus_energy/tariff/gas/unit_rate_ct` | Arbeitspreis in ct/kWh |
-| `octopus_energy/tariff/gas/standing_charge_ct` | Grundgebühr in ct/Tag |
 
 ### Rechnungen
 | Topic | Beschreibung |
@@ -87,13 +81,6 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/consumption/electricity_export/yesterday` | Einspeisung Gestern (kWh) |
 | `octopus_energy/consumption/electricity_export/last_365_days` | Tageswerte (JSON) |
 
-### Verbrauch – Gas
-| Topic | Beschreibung |
-|-------|-------------|
-| `octopus_energy/consumption/gas/today` | Heute (kWh) |
-| `octopus_energy/consumption/gas/yesterday` | Gestern (kWh) |
-| `octopus_energy/consumption/gas/current_month` | Aktueller Monat (kWh) |
-| `octopus_energy/consumption/gas/current_year` | Aktuelles Jahr (kWh) |
 
 ### Kosten (berechnet aus Tarif × Verbrauch)
 | Topic | Beschreibung |
@@ -108,8 +95,7 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/meter/electricity/serial_number` | Stromzähler Seriennummer |
 | `octopus_energy/meter/electricity/mpan` | MPAN |
 | `octopus_energy/meter/electricity/is_smart` | Smartmeter vorhanden |
-| `octopus_energy/meter/gas/serial_number` | Gaszähler Seriennummer |
-| `octopus_energy/meter/gas/mprn` | MPRN |
+
 
 ### Zahlungen
 | Topic | Beschreibung |
@@ -131,8 +117,7 @@ Das Add-on registriert automatisch **30 Sensoren** in Home Assistant:
 - Strom Verbrauch: Heute, Gestern, Aktueller Monat, Letzter Monat, Aktuelles Jahr
 - Strom Kosten: Heute, Gestern, Aktueller Monat
 - Einspeisung: Heute, Gestern
-- Gas Verbrauch: Heute, Gestern, Aktueller Monat
-- Zähler: Seriennummer Strom & Gas
+- Zähler: Seriennummer Strom
 - Zahlungen: Letzter Betrag & Datum
 - Letzter Abruf Zeitstempel
 
@@ -146,6 +131,9 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.2.6
+- Gas komplett entfernt (Queries, Sensoren, MQTT Topics, Parsing)
 
 ### 0.2.5
 - Bugfix: `meters` → `meter` (Singular) auf MaLo-Typ

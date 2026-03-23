@@ -74,11 +74,6 @@ query MeterInfo($accountNumber: String!) {
           }
         }
       }
-      gasMalos {
-        meter {
-          serialNumber
-        }
-      }
     }
   }
 }
@@ -92,21 +87,6 @@ query ConsumptionDaily($accountNumber: String!, $startDate: String!, $endDate: S
         meter {
           serialNumber
           isExport
-          consumption(
-            startDate: $startDate
-            endDate: $endDate
-            grouping: DAY
-          ) {
-            startAt
-            endAt
-            value
-            unit
-          }
-        }
-      }
-      gasMalos {
-        meter {
-          serialNumber
           consumption(
             startDate: $startDate
             endDate: $endDate
@@ -157,21 +137,6 @@ query ConsumptionMonthly($accountNumber: String!, $startDate: String!, $endDate:
         meter {
           serialNumber
           isExport
-          consumption(
-            startDate: $startDate
-            endDate: $endDate
-            grouping: MONTH
-          ) {
-            startAt
-            endAt
-            value
-            unit
-          }
-        }
-      }
-      gasMalos {
-        meter {
-          serialNumber
           consumption(
             startDate: $startDate
             endDate: $endDate
@@ -289,7 +254,6 @@ class OctopusEnergyClient:
 
     def authenticate(self) -> None:
         log.info("Authentifiziere bei Octopus Energy Deutschland...")
-        # Reset token before authenticating (no Authorization header)
         self.token = None
         data = self._graphql(
             QUERY_OBTAIN_TOKEN,
@@ -353,7 +317,7 @@ class OctopusEnergyClient:
         return [edge["node"] for edge in edges]
 
     def _parse_consumption(self, data: dict) -> dict:
-        result = {"electricity": [], "electricity_export": [], "gas": []}
+        result = {"electricity": [], "electricity_export": []}
         for prop in data.get("account", {}).get("properties", []):
             for mp in prop.get("electricityMalos", []):
                 meter = mp.get("meter", {})
@@ -362,12 +326,6 @@ class OctopusEnergyClient:
                     key = "electricity_export" if meter.get("isExport") else "electricity"
                     for entry in meter.get("consumption", []):
                         result[key].append({"serial_number": serial, **entry})
-            for mp in prop.get("gasMalos", []):
-                meter = mp.get("meter", {})
-                if meter:
-                    serial = meter.get("serialNumber", "unknown")
-                    for entry in meter.get("consumption", []):
-                        result["gas"].append({"serial_number": serial, **entry})
         return result
 
 
@@ -408,7 +366,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.2.5",
+        "sw_version": "0.2.6",
     }
 
     sensors = [
@@ -419,24 +377,6 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         {"name": "Octopus Überfälliger Betrag", "unique_id": "octopus_overdue_balance",
          "state_topic": f"{topic_prefix}/account/overdue_balance", "unit_of_measurement": "EUR",
          "device_class": "monetary", "icon": "mdi:cash-alert"},
-        # Tariff electricity
-        {"name": "Octopus Strom Arbeitspreis", "unique_id": "octopus_electricity_unit_rate",
-         "state_topic": f"{topic_prefix}/tariff/electricity/unit_rate_ct",
-         "unit_of_measurement": "ct/kWh", "icon": "mdi:lightning-bolt"},
-        {"name": "Octopus Strom Grundgebühr", "unique_id": "octopus_electricity_standing_charge",
-         "state_topic": f"{topic_prefix}/tariff/electricity/standing_charge_ct",
-         "unit_of_measurement": "ct/Tag", "icon": "mdi:calendar-today"},
-        {"name": "Octopus Strom Tarifname", "unique_id": "octopus_electricity_tariff_name",
-         "state_topic": f"{topic_prefix}/tariff/electricity/display_name", "icon": "mdi:tag"},
-        {"name": "Octopus Strom Tarif gültig bis", "unique_id": "octopus_electricity_tariff_valid_to",
-         "state_topic": f"{topic_prefix}/tariff/electricity/valid_to", "icon": "mdi:calendar-end"},
-        # Tariff gas
-        {"name": "Octopus Gas Arbeitspreis", "unique_id": "octopus_gas_unit_rate",
-         "state_topic": f"{topic_prefix}/tariff/gas/unit_rate_ct",
-         "unit_of_measurement": "ct/kWh", "icon": "mdi:fire"},
-        {"name": "Octopus Gas Grundgebühr", "unique_id": "octopus_gas_standing_charge",
-         "state_topic": f"{topic_prefix}/tariff/gas/standing_charge_ct",
-         "unit_of_measurement": "ct/Tag", "icon": "mdi:calendar-today"},
         # Bills
         {"name": "Octopus Letzte Rechnung (Brutto)", "unique_id": "octopus_last_bill_gross",
          "state_topic": f"{topic_prefix}/bills/latest/gross_total", "unit_of_measurement": "EUR",
@@ -488,21 +428,9 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         {"name": "Octopus Strom Einspeisung Gestern", "unique_id": "octopus_electricity_export_yesterday",
          "state_topic": f"{topic_prefix}/consumption/electricity_export/yesterday",
          "unit_of_measurement": "kWh", "device_class": "energy", "icon": "mdi:solar-power"},
-        # Gas
-        {"name": "Octopus Gas Verbrauch Heute", "unique_id": "octopus_gas_today",
-         "state_topic": f"{topic_prefix}/consumption/gas/today",
-         "unit_of_measurement": "kWh", "device_class": "energy", "icon": "mdi:fire"},
-        {"name": "Octopus Gas Verbrauch Gestern", "unique_id": "octopus_gas_yesterday",
-         "state_topic": f"{topic_prefix}/consumption/gas/yesterday",
-         "unit_of_measurement": "kWh", "device_class": "energy", "icon": "mdi:fire"},
-        {"name": "Octopus Gas Verbrauch Aktueller Monat", "unique_id": "octopus_gas_current_month",
-         "state_topic": f"{topic_prefix}/consumption/gas/current_month",
-         "unit_of_measurement": "kWh", "device_class": "energy", "icon": "mdi:fire"},
         # Meter
         {"name": "Octopus Stromzähler Seriennummer", "unique_id": "octopus_electricity_meter_serial",
          "state_topic": f"{topic_prefix}/meter/electricity/serial_number", "icon": "mdi:counter"},
-        {"name": "Octopus Gaszähler Seriennummer", "unique_id": "octopus_gas_meter_serial",
-         "state_topic": f"{topic_prefix}/meter/gas/serial_number", "icon": "mdi:counter"},
         # Payments
         {"name": "Octopus Letzte Zahlung", "unique_id": "octopus_last_payment",
          "state_topic": f"{topic_prefix}/payments/latest/amount", "unit_of_measurement": "EUR",
@@ -547,7 +475,6 @@ def calc_cost(kwh: float, unit_rate_ct: float, standing_charge_ct: float, days: 
 # ---------------------------------------------------------------------------
 
 def try_fetch(label: str, fn):
-    """Run fn(), log errors, return result or None."""
     try:
         return fn()
     except Exception as exc:
@@ -557,7 +484,6 @@ def try_fetch(label: str, fn):
 
 def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> None:
     p = mqtt_pub.publish
-    prefix = mqtt_pub.topic_prefix
     now = datetime.now()
     today = now.strftime("%Y-%m-%d")
     yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -592,11 +518,6 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
                 if meter:
                     p("meter/electricity/serial_number", meter.get("serialNumber", ""))
                     p("meter/electricity/is_smart", bool(meter.get("smartDevices")))
-            gas_malos = prop.get("gasMalos", [])
-            if gas_malos:
-                gas_meter = gas_malos[0].get("meter", {})
-                if gas_meter:
-                    p("meter/gas/serial_number", gas_meter.get("serialNumber", ""))
 
     # -- Payments ------------------------------------------------------------
     payments = try_fetch("Zahlungen", client.get_payments)
@@ -630,7 +551,6 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
     if daily:
         elec = daily["electricity"]
         elec_export = daily["electricity_export"]
-        gas = daily["gas"]
 
         p("consumption/electricity/last_365_days", elec)
 
@@ -652,13 +572,6 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             p("consumption/electricity_export/today", round(sum_for_date(elec_export, today), 3))
             p("consumption/electricity_export/yesterday", round(sum_for_date(elec_export, yesterday), 3))
 
-        if gas:
-            p("consumption/gas/last_365_days", gas)
-            p("consumption/gas/today", round(sum_for_date(gas, today), 3))
-            p("consumption/gas/yesterday", round(sum_for_date(gas, yesterday), 3))
-            p("consumption/gas/current_month", round(sum_for_month(gas, now.year, now.month), 3))
-            p("consumption/gas/current_year", round(sum_for_year(gas, now.year), 3))
-
         if electricity_unit_rate > 0:
             p("cost/electricity/today", calc_cost(elec_today, electricity_unit_rate, electricity_standing_charge))
             p("cost/electricity/yesterday", calc_cost(elec_yesterday, electricity_unit_rate, electricity_standing_charge))
@@ -670,8 +583,6 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
     monthly = try_fetch("Monatsverbräuche", lambda: client.get_consumption_monthly(months_back=12))
     if monthly:
         p("consumption/electricity/monthly_12", monthly["electricity"])
-        if monthly["gas"]:
-            p("consumption/gas/monthly_12", monthly["gas"])
 
     # -- Half-hour consumption -----------------------------------------------
     halfhour = try_fetch("15-Min-Verbräuche", lambda: client.get_consumption_halfhour(days_back=2))

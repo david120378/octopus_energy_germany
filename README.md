@@ -65,8 +65,8 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 ### Rechnungen
 | Topic | Beschreibung |
 |-------|-------------|
-| `octopus_energy/bills/count` | Anzahl Rechnungen |
-| `octopus_energy/bills/all` | Alle Rechnungen (JSON) |
+| `octopus_energy/bills/count` | Anzahl Rechnungen (letzte 2 Jahre) |
+| `octopus_energy/bills/all` | Alle Rechnungen als JSON |
 | `octopus_energy/bills/latest/gross_total` | Letzte Rechnung Brutto EUR |
 | `octopus_energy/bills/latest/net_total` | Letzte Rechnung Netto EUR |
 | `octopus_energy/bills/latest/tax_total` | Letzte Rechnung MwSt EUR |
@@ -74,7 +74,14 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/bills/latest/from_date` | Abrechnungszeitraum Von |
 | `octopus_energy/bills/latest/to_date` | Abrechnungszeitraum Bis |
 | `octopus_energy/bills/latest/pdf_url` | Temporärer PDF-Download-Link |
-| `octopus_energy/bills/latest/transactions` | Einzelposten der Rechnung (JSON) |
+| `octopus_energy/bills/YYYY-MM/gross_total` | Brutto EUR (je Monat) |
+| `octopus_energy/bills/YYYY-MM/net_total` | Netto EUR (je Monat) |
+| `octopus_energy/bills/YYYY-MM/tax_total` | MwSt EUR (je Monat) |
+| `octopus_energy/bills/YYYY-MM/issued_date` | Rechnungsdatum (je Monat) |
+| `octopus_energy/bills/YYYY-MM/from_date` | Zeitraum Von (je Monat) |
+| `octopus_energy/bills/YYYY-MM/to_date` | Zeitraum Bis (je Monat) |
+| `octopus_energy/bills/YYYY-MM/pdf_url` | PDF-Link (je Monat) |
+| `octopus_energy/bills/YYYY-MM/transactions` | Einzelposten JSON (je Monat) |
 
 ### Zahlungen
 | Topic | Beschreibung |
@@ -108,6 +115,11 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.5.1
+- Rechnungen der letzten 2 Jahre als eigene MQTT-Topics pro Monat (`bills/YYYY-MM/...`)
+- Jede Rechnung veröffentlicht: Brutto/Netto/MwSt, Zeitraum, PDF-Link, Einzelposten
+- Abruf auf 30 Rechnungen erhöht
 
 ### 0.5.0
 - Verbrauch & Kosten für alle Zeiträume: Tag, Woche, Monat, Jahr (jeweils aktuell + vorherig)

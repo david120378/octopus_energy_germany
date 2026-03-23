@@ -68,7 +68,7 @@ query Payments($accountNumber: String!) {
 QUERY_BILLS = """
 query Bills($accountNumber: String!) {
   account(accountNumber: $accountNumber) {
-    bills(first: 10) {
+    bills(first: 30) {
       edges {
         node {
           id
@@ -314,7 +314,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.0",
+        "sw_version": "0.5.1",
     }
 
     sensors = [
@@ -546,22 +546,44 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
     # -- Bills ---------------------------------------------------------------
     bills = try_fetch("Rechnungen", client.get_bills)
     if bills is not None:
-        p("bills/count", len(bills))
-        p("bills/all", bills)
-        if bills:
-            latest = bills[0]
+        cutoff = now.replace(year=now.year - 2)
+        recent_bills = [
+            b for b in bills
+            if b.get("issuedDate", "9999") >= cutoff.strftime("%Y-%m-%d")
+        ]
+        p("bills/count", len(recent_bills))
+        p("bills/all", recent_bills)
+
+        for bill in recent_bills:
+            issued = bill.get("issuedDate", "")
+            key = issued[:7] if issued else None  # YYYY-MM
+            if not key:
+                continue
+            charges = bill.get("totalCharges", {})
+            p(f"bills/{key}/gross_total", round(charges.get("grossTotal", 0) / 100, 2))
+            p(f"bills/{key}/net_total",   round(charges.get("netTotal", 0) / 100, 2))
+            p(f"bills/{key}/tax_total",   round(charges.get("taxTotal", 0) / 100, 2))
+            p(f"bills/{key}/issued_date", issued)
+            p(f"bills/{key}/from_date",   bill.get("fromDate", ""))
+            p(f"bills/{key}/to_date",     bill.get("toDate", ""))
+            p(f"bills/{key}/bill_type",   bill.get("billType", ""))
+            p(f"bills/{key}/pdf_url",     bill.get("temporaryUrl", ""))
+            transactions = [e["node"] for e in bill.get("transactions", {}).get("edges", [])]
+            p(f"bills/{key}/transactions", transactions)
+
+        if recent_bills:
+            latest = recent_bills[0]
             charges = latest.get("totalCharges", {})
             p("bills/latest/gross_total", round(charges.get("grossTotal", 0) / 100, 2))
-            p("bills/latest/net_total", round(charges.get("netTotal", 0) / 100, 2))
-            p("bills/latest/tax_total", round(charges.get("taxTotal", 0) / 100, 2))
+            p("bills/latest/net_total",   round(charges.get("netTotal", 0) / 100, 2))
+            p("bills/latest/tax_total",   round(charges.get("taxTotal", 0) / 100, 2))
             p("bills/latest/issued_date", latest.get("issuedDate", ""))
-            p("bills/latest/from_date", latest.get("fromDate", ""))
-            p("bills/latest/to_date", latest.get("toDate", ""))
-            p("bills/latest/bill_type", latest.get("billType", ""))
-            p("bills/latest/pdf_url", latest.get("temporaryUrl", ""))
-            transactions = [e["node"] for e in latest.get("transactions", {}).get("edges", [])]
-            p("bills/latest/transactions", transactions)
-            log.info("Rechnungen veröffentlicht. Letzte: %.2f EUR", charges.get("grossTotal", 0) / 100)
+            p("bills/latest/from_date",   latest.get("fromDate", ""))
+            p("bills/latest/to_date",     latest.get("toDate", ""))
+            p("bills/latest/bill_type",   latest.get("billType", ""))
+            p("bills/latest/pdf_url",     latest.get("temporaryUrl", ""))
+            log.info("Rechnungen veröffentlicht: %d Stück. Letzte: %.2f EUR",
+                     len(recent_bills), charges.get("grossTotal", 0) / 100)
 
     p("last_updated", now.isoformat())
     log.info("Abruf abgeschlossen.")

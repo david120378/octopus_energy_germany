@@ -132,6 +132,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.2.9
+- Bugfix: consumption direkt auf account.electricityMalos-Ebene (mit maloId)
+
 ### 0.2.8
 - Bugfix: `transactions(first: 50)` Pagination in Bills-Query
 - Bugfix: `consumption` auf `properties`-Ebene verschoben (nicht auf MaLo)

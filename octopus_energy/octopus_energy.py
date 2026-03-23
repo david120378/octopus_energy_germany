@@ -64,7 +64,8 @@ query Payments($accountNumber: String!) {
 QUERY_METER_CONSUMPTION_DAILY = """
 query ConsumptionDaily($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
-    properties {
+    electricityMalos {
+      maloId
       consumption(
         startDate: $startDate
         endDate: $endDate
@@ -83,7 +84,8 @@ query ConsumptionDaily($accountNumber: String!, $startDate: String!, $endDate: S
 QUERY_METER_CONSUMPTION_HALFHOUR = """
 query ConsumptionHalfHour($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
-    properties {
+    electricityMalos {
+      maloId
       consumption(
         startDate: $startDate
         endDate: $endDate
@@ -102,7 +104,8 @@ query ConsumptionHalfHour($accountNumber: String!, $startDate: String!, $endDate
 QUERY_METER_CONSUMPTION_MONTHLY = """
 query ConsumptionMonthly($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
-    properties {
+    electricityMalos {
+      maloId
       consumption(
         startDate: $startDate
         endDate: $endDate
@@ -278,8 +281,8 @@ class OctopusEnergyClient:
 
     def _parse_consumption(self, data: dict) -> dict:
         result = {"electricity": [], "electricity_export": []}
-        for prop in data.get("account", {}).get("properties", []):
-            for entry in prop.get("consumption", []):
+        for malo in data.get("account", {}).get("electricityMalos", []):
+            for entry in malo.get("consumption", []):
                 result["electricity"].append(entry)
         return result
 
@@ -321,7 +324,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.2.8",
+        "sw_version": "0.2.9",
     }
 
     sensors = [

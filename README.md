@@ -147,6 +147,12 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.2.5
+- Bugfix: `meters` → `meter` (Singular) auf MaLo-Typ
+- Bugfix: `marketLocationId` entfernt (existiert nicht auf MaLo)
+- Bugfix: Payments-Query mit `first: 20` Pagination
+- Bugfix: `isCredit` / `isExport` aus Bill-Transaktionen entfernt
+
 ### 0.2.4
 - Bugfix: Deutsche API-Feldnamen korrigiert (von UK-Schema auf OEG-Schema)
   - `electricityMeterPoints` → `electricityMalos`

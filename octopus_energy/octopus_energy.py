@@ -5,7 +5,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import paho.mqtt.client as mqtt
 import requests
@@ -17,6 +17,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 GRAPHQL_URL = "https://api.oeg-kraken.energy/v1/graphql/"
+TIMEZONE = "Europe/Berlin"
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +41,9 @@ query Account($accountNumber: String!) {
     ledgers {
       balance
       ledgerType
+    }
+    properties {
+      id
     }
   }
 }
@@ -120,6 +124,58 @@ query Bills($accountNumber: String!) {
 }
 """
 
+QUERY_MEASUREMENTS = """
+query getAccountMeasurements(
+    $propertyId: ID!
+    $first: Int!
+    $utilityFilters: [UtilityFiltersInput!]
+    $startAt: DateTime
+    $endAt: DateTime
+    $timezone: String
+) {
+  property(id: $propertyId) {
+    measurements(
+      first: $first
+      utilityFilters: $utilityFilters
+      startAt: $startAt
+      endAt: $endAt
+      timezone: $timezone
+    ) {
+      edges {
+        node {
+          value
+          unit
+          ... on IntervalMeasurementType {
+            startAt
+            endAt
+            durationInSeconds
+          }
+          metaData {
+            statistics {
+              costExclTax {
+                pricePerUnit {
+                  amount
+                }
+                costCurrency
+                estimatedAmount
+              }
+              costInclTax {
+                costCurrency
+                estimatedAmount
+              }
+              value
+              description
+              label
+              type
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"""
+
 
 # ---------------------------------------------------------------------------
 # API client
@@ -132,6 +188,7 @@ class OctopusEnergyClient:
         self.account_number = account_number
         self.token: str | None = None
         self.token_expires_at: datetime | None = None
+        self.property_id: str | None = None
 
     def _graphql(self, query: str, variables: dict | None = None) -> dict:
         headers = {"Content-Type": "application/json"}
@@ -180,7 +237,13 @@ class OctopusEnergyClient:
 
     def get_account(self) -> dict:
         data = self._query(QUERY_ACCOUNT, {"accountNumber": self.account_number})
-        return data.get("account", {})
+        account = data.get("account", {})
+        # Cache property ID
+        properties = account.get("properties", [])
+        if properties and not self.property_id:
+            self.property_id = str(properties[0].get("id", ""))
+            log.info("Property ID: %s", self.property_id)
+        return account
 
     def get_payments(self) -> list:
         data = self._query(QUERY_PAYMENTS, {"accountNumber": self.account_number})
@@ -191,6 +254,27 @@ class OctopusEnergyClient:
         data = self._query(QUERY_BILLS, {"accountNumber": self.account_number})
         edges = data.get("account", {}).get("bills", {}).get("edges", [])
         return [edge["node"] for edge in edges]
+
+    def get_measurements(self, days_back: int = 30, frequency: str = "DAY_INTERVAL") -> list:
+        if not self.property_id:
+            raise RuntimeError("Property ID nicht verfügbar – Kontodaten zuerst abrufen.")
+
+        now_utc = datetime.now(timezone.utc)
+        start_utc = now_utc - timedelta(days=days_back)
+
+        data = self._query(
+            QUERY_MEASUREMENTS,
+            {
+                "propertyId": self.property_id,
+                "first": days_back + 5,
+                "startAt": start_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "endAt": now_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "timezone": TIMEZONE,
+                "utilityFilters": [{"electricityFilters": {"readingFrequencyType": frequency}}],
+            },
+        )
+        edges = data.get("property", {}).get("measurements", {}).get("edges", [])
+        return [e["node"] for e in edges]
 
 
 # ---------------------------------------------------------------------------
@@ -230,7 +314,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.3.0",
+        "sw_version": "0.4.0",
     }
 
     sensors = [
@@ -258,6 +342,32 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
          "state_topic": f"{topic_prefix}/bills/latest/pdf_url", "icon": "mdi:file-pdf-box"},
         {"name": "Octopus Anzahl Rechnungen", "unique_id": "octopus_bill_count",
          "state_topic": f"{topic_prefix}/bills/count", "icon": "mdi:counter"},
+        # Consumption
+        {"name": "Octopus Strom Verbrauch Heute", "unique_id": "octopus_electricity_today",
+         "state_topic": f"{topic_prefix}/consumption/today", "unit_of_measurement": "kWh",
+         "device_class": "energy", "state_class": "total_increasing", "icon": "mdi:lightning-bolt"},
+        {"name": "Octopus Strom Verbrauch Gestern", "unique_id": "octopus_electricity_yesterday",
+         "state_topic": f"{topic_prefix}/consumption/yesterday", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
+        {"name": "Octopus Strom Verbrauch Aktueller Monat", "unique_id": "octopus_electricity_current_month",
+         "state_topic": f"{topic_prefix}/consumption/current_month", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt"},
+        {"name": "Octopus Strom Verbrauch Letzter Monat", "unique_id": "octopus_electricity_last_month",
+         "state_topic": f"{topic_prefix}/consumption/last_month", "unit_of_measurement": "kWh",
+         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
+        # Cost (from API, incl. tax)
+        {"name": "Octopus Strom Kosten Heute", "unique_id": "octopus_cost_today",
+         "state_topic": f"{topic_prefix}/cost/today", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Gestern", "unique_id": "octopus_cost_yesterday",
+         "state_topic": f"{topic_prefix}/cost/yesterday", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Aktueller Monat", "unique_id": "octopus_cost_current_month",
+         "state_topic": f"{topic_prefix}/cost/current_month", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        {"name": "Octopus Strom Kosten Letzter Monat", "unique_id": "octopus_cost_last_month",
+         "state_topic": f"{topic_prefix}/cost/last_month", "unit_of_measurement": "EUR",
+         "device_class": "monetary", "icon": "mdi:currency-eur"},
         # Payments
         {"name": "Octopus Letzte Zahlung", "unique_id": "octopus_last_payment",
          "state_topic": f"{topic_prefix}/payments/latest/amount", "unit_of_measurement": "EUR",
@@ -279,8 +389,27 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Fetch & publish
+# Helpers
 # ---------------------------------------------------------------------------
+
+def sum_kwh(entries: list, date_prefix: str) -> float:
+    return round(sum(
+        float(e.get("value", 0))
+        for e in entries
+        if e.get("startAt", "").startswith(date_prefix)
+    ), 3)
+
+def sum_cost(entries: list, date_prefix: str) -> float:
+    total = 0.0
+    for e in entries:
+        if not e.get("startAt", "").startswith(date_prefix):
+            continue
+        for stat in e.get("metaData", {}).get("statistics", []):
+            incl = stat.get("costInclTax", {})
+            if incl.get("estimatedAmount") is not None:
+                total += float(incl["estimatedAmount"])
+    return round(total / 100, 4)
+
 
 def try_fetch(label: str, fn):
     try:
@@ -290,9 +419,18 @@ def try_fetch(label: str, fn):
         return None
 
 
+# ---------------------------------------------------------------------------
+# Fetch & publish
+# ---------------------------------------------------------------------------
+
 def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> None:
     p = mqtt_pub.publish
     now = datetime.now()
+    today = now.strftime("%Y-%m-%d")
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    cur_month = now.strftime("%Y-%m")
+    last_mo = (now.replace(day=1) - timedelta(days=1))
+    last_month = last_mo.strftime("%Y-%m")
 
     try:
         client.ensure_authenticated()
@@ -300,7 +438,7 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         log.error("Authentifizierung fehlgeschlagen: %s", exc)
         return
 
-    # -- Account -------------------------------------------------------------
+    # -- Account (also caches property_id) -----------------------------------
     account = try_fetch("Kontodaten", client.get_account)
     if account:
         p("account/balance", round(account.get("balance", 0) / 100, 2))
@@ -309,6 +447,49 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         for ledger in account.get("ledgers", []):
             p(f"account/ledger/{ledger.get('ledgerType','').lower()}", round(ledger.get("balance", 0) / 100, 2))
         log.info("Kontodaten veröffentlicht. Kontostand: %.2f EUR", account.get("balance", 0) / 100)
+
+    # -- Measurements (consumption + cost) -----------------------------------
+    measurements = try_fetch(
+        "Verbrauchsdaten",
+        lambda: client.get_measurements(days_back=60, frequency="DAY_INTERVAL"),
+    )
+    if measurements:
+        p("consumption/all", measurements)
+
+        kwh_today = sum_kwh(measurements, today)
+        kwh_yesterday = sum_kwh(measurements, yesterday)
+        kwh_cur_month = sum(
+            float(e.get("value", 0))
+            for e in measurements if e.get("startAt", "").startswith(cur_month)
+        )
+        kwh_last_month = sum(
+            float(e.get("value", 0))
+            for e in measurements if e.get("startAt", "").startswith(last_month)
+        )
+        p("consumption/today", round(kwh_today, 3))
+        p("consumption/yesterday", round(kwh_yesterday, 3))
+        p("consumption/current_month", round(kwh_cur_month, 3))
+        p("consumption/last_month", round(kwh_last_month, 3))
+
+        cost_today = sum_cost(measurements, today)
+        cost_yesterday = sum_cost(measurements, yesterday)
+        cost_cur_month = sum(
+            sum_cost([e], e.get("startAt", "")[:7])
+            for e in measurements if e.get("startAt", "").startswith(cur_month)
+        )
+        cost_last_month = sum(
+            sum_cost([e], e.get("startAt", "")[:7])
+            for e in measurements if e.get("startAt", "").startswith(last_month)
+        )
+        p("cost/today", round(cost_today, 4))
+        p("cost/yesterday", round(cost_yesterday, 4))
+        p("cost/current_month", round(cost_cur_month, 2))
+        p("cost/last_month", round(cost_last_month, 2))
+
+        log.info(
+            "Verbrauch: Heute %.3f kWh (%.2f EUR), Monat %.3f kWh (%.2f EUR)",
+            kwh_today, cost_today, kwh_cur_month, cost_cur_month,
+        )
 
     # -- Payments ------------------------------------------------------------
     payments = try_fetch("Zahlungen", client.get_payments)

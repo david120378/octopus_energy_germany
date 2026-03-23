@@ -35,8 +35,19 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/account/balance` | Kontostand in EUR |
 | `octopus_energy/account/overdue_balance` | Überfälliger Betrag in EUR |
 | `octopus_energy/account/ledger/electricity_ledger` | Strom-Ledger Saldo EUR |
-| `octopus_energy/account/ledger/gas_ledger` | Gas-Ledger Saldo EUR |
 | `octopus_energy/account/details` | Vollständige Kontodaten (JSON) |
+
+### Verbrauch & Kosten
+| Topic | Beschreibung |
+|-------|-------------|
+| `octopus_energy/consumption/today_kwh` | Stromverbrauch heute (kWh) |
+| `octopus_energy/consumption/yesterday_kwh` | Stromverbrauch gestern (kWh) |
+| `octopus_energy/consumption/current_month_kwh` | Stromverbrauch aktueller Monat (kWh) |
+| `octopus_energy/consumption/last_month_kwh` | Stromverbrauch letzter Monat (kWh) |
+| `octopus_energy/consumption/today_cost_eur` | Stromkosten heute (EUR inkl. MwSt) |
+| `octopus_energy/consumption/yesterday_cost_eur` | Stromkosten gestern (EUR inkl. MwSt) |
+| `octopus_energy/consumption/current_month_cost_eur` | Stromkosten aktueller Monat (EUR inkl. MwSt) |
+| `octopus_energy/consumption/last_month_cost_eur` | Stromkosten letzter Monat (EUR inkl. MwSt) |
 
 ### Rechnungen
 | Topic | Beschreibung |
@@ -64,14 +75,14 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 
 ## Home Assistant Sensoren (MQTT Discovery)
 
-Das Add-on registriert automatisch **12 Sensoren** in Home Assistant:
+Das Add-on registriert automatisch **20 Sensoren** in Home Assistant:
 
 - Konto: Kontostand, Überfälliger Betrag
+- Verbrauch: Heute/Gestern/Aktueller Monat/Letzter Monat (kWh)
+- Kosten: Heute/Gestern/Aktueller Monat/Letzter Monat (EUR inkl. MwSt)
 - Rechnungen: Brutto/Netto, Datum (Von/Bis), Anzahl, PDF-Link
 - Zahlungen: Letzter Betrag & Datum
 - Letzter Abruf Zeitstempel
-
-> **Hinweis:** Verbrauchsdaten (kWh) sind über die öffentliche OEG Kraken GraphQL API aktuell nicht zugänglich.
 
 ---
 
@@ -83,6 +94,13 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.4.0
+- Verbrauchsdaten via `property(id) { measurements(...) }` GraphQL-Endpoint
+- Neue MQTT-Topics: Verbrauch heute/gestern/aktueller Monat/letzter Monat (kWh)
+- Neue MQTT-Topics: Kosten heute/gestern/aktueller Monat/letzter Monat (EUR inkl. MwSt)
+- Property-ID wird einmalig aus Account-Query gecacht
+- 20 HA Sensoren (vorher: 12)
 
 ### 0.3.0
 - Stabile Version: Verbrauchsdaten entfernt (kein zugänglicher Pfad im deutschen OEG-Schema)

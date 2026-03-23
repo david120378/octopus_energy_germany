@@ -41,40 +41,6 @@ query Account($accountNumber: String!) {
       balance
       ledgerType
     }
-    electricityAgreements {
-      validFrom
-      validTo
-      tariff {
-        ... on HalfHourlyTariff {
-          displayName
-          standingCharge
-          unitRate
-        }
-        ... on StandardTariff {
-          displayName
-          standingCharge
-          unitRate
-        }
-      }
-    }
-  }
-}
-"""
-
-QUERY_GAS_AGREEMENTS = """
-query GasAgreements($accountNumber: String!) {
-  account(accountNumber: $accountNumber) {
-    gasAgreements {
-      validFrom
-      validTo
-      tariff {
-        ... on StandardTariff {
-          displayName
-          standingCharge
-          unitRate
-        }
-      }
-    }
   }
 }
 """
@@ -86,7 +52,7 @@ query Payments($accountNumber: String!) {
       edges {
         node {
           amount
-          postedDate
+          paymentDate
           transactionType
         }
       }
@@ -99,8 +65,8 @@ QUERY_METER_INFO = """
 query MeterInfo($accountNumber: String!) {
   account(accountNumber: $accountNumber) {
     properties {
-      electricityMeterPoints {
-        mpan
+      electricityMalos {
+        marketLocationId
         meters {
           serialNumber
           isExport
@@ -109,8 +75,8 @@ query MeterInfo($accountNumber: String!) {
           }
         }
       }
-      gasMeterPoints {
-        mprn
+      gasMalos {
+        marketLocationId
         meters {
           serialNumber
         }
@@ -124,7 +90,7 @@ QUERY_METER_CONSUMPTION_DAILY = """
 query ConsumptionDaily($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
     properties {
-      electricityMeterPoints {
+      electricityMalos {
         meters {
           serialNumber
           isExport
@@ -140,7 +106,7 @@ query ConsumptionDaily($accountNumber: String!, $startDate: String!, $endDate: S
           }
         }
       }
-      gasMeterPoints {
+      gasMalos {
         meters {
           serialNumber
           consumption(
@@ -164,7 +130,7 @@ QUERY_METER_CONSUMPTION_HALFHOUR = """
 query ConsumptionHalfHour($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
     properties {
-      electricityMeterPoints {
+      electricityMalos {
         meters {
           serialNumber
           isExport
@@ -189,7 +155,7 @@ QUERY_METER_CONSUMPTION_MONTHLY = """
 query ConsumptionMonthly($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
     properties {
-      electricityMeterPoints {
+      electricityMalos {
         meters {
           serialNumber
           isExport
@@ -205,7 +171,7 @@ query ConsumptionMonthly($accountNumber: String!, $startDate: String!, $endDate:
           }
         }
       }
-      gasMeterPoints {
+      gasMalos {
         meters {
           serialNumber
           consumption(
@@ -237,23 +203,47 @@ query Bills($accountNumber: String!) {
           toDate
           issuedDate
           temporaryUrl
-          totalCharges {
-            netTotal
-            grossTotal
-            taxTotal
-          }
-          transactions {
-            edges {
-              node {
-                postedDate
-                amounts {
-                  net
-                  tax
-                  gross
+          ... on InvoiceType {
+            totalCharges {
+              netTotal
+              grossTotal
+              taxTotal
+            }
+            transactions {
+              edges {
+                node {
+                  postedDate
+                  amounts {
+                    net
+                    tax
+                    gross
+                  }
+                  title
+                  isCredit
+                  isExport
                 }
-                title
-                isCredit
-                isExport
+              }
+            }
+          }
+          ... on StatementType {
+            totalCharges {
+              netTotal
+              grossTotal
+              taxTotal
+            }
+            transactions {
+              edges {
+                node {
+                  postedDate
+                  amounts {
+                    net
+                    tax
+                    gross
+                  }
+                  title
+                  isCredit
+                  isExport
+                }
               }
             }
           }
@@ -327,10 +317,6 @@ class OctopusEnergyClient:
         data = self._query(QUERY_ACCOUNT, {"accountNumber": self.account_number})
         return data.get("account", {})
 
-    def get_gas_agreements(self) -> list:
-        data = self._query(QUERY_GAS_AGREEMENTS, {"accountNumber": self.account_number})
-        return data.get("account", {}).get("gasAgreements", [])
-
     def get_payments(self) -> list:
         data = self._query(QUERY_PAYMENTS, {"accountNumber": self.account_number})
         edges = data.get("account", {}).get("payments", {}).get("edges", [])
@@ -375,14 +361,14 @@ class OctopusEnergyClient:
     def _parse_consumption(self, data: dict) -> dict:
         result = {"electricity": [], "electricity_export": [], "gas": []}
         for prop in data.get("account", {}).get("properties", []):
-            for mp in prop.get("electricityMeterPoints", []):
+            for mp in prop.get("electricityMalos", []):
                 for meter in mp.get("meters", []):
                     serial = meter.get("serialNumber", "unknown")
                     is_export = meter.get("isExport", False)
                     key = "electricity_export" if is_export else "electricity"
                     for entry in meter.get("consumption", []):
                         result[key].append({"serial_number": serial, **entry})
-            for mp in prop.get("gasMeterPoints", []):
+            for mp in prop.get("gasMalos", []):
                 for meter in mp.get("meters", []):
                     serial = meter.get("serialNumber", "unknown")
                     for entry in meter.get("consumption", []):
@@ -427,7 +413,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.2.3",
+        "sw_version": "0.2.4",
     }
 
     sensors = [
@@ -591,7 +577,7 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         log.error("Authentifizierung fehlgeschlagen: %s", exc)
         return
 
-    # -- Account & electricity tariff ----------------------------------------
+    # -- Account -------------------------------------------------------------
     account = try_fetch("Kontodaten", client.get_account)
     if account:
         p("account/balance", round(account.get("balance", 0) / 100, 2))
@@ -599,44 +585,23 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         p("account/details", account)
         for ledger in account.get("ledgers", []):
             p(f"account/ledger/{ledger.get('ledgerType','').lower()}", round(ledger.get("balance", 0) / 100, 2))
-
-        agreements = account.get("electricityAgreements", [])
-        if agreements:
-            tariff = agreements[0].get("tariff", {})
-            electricity_unit_rate = tariff.get("unitRate", 0.0)
-            electricity_standing_charge = tariff.get("standingCharge", 0.0)
-            p("tariff/electricity/display_name", tariff.get("displayName", ""))
-            p("tariff/electricity/unit_rate_ct", round(electricity_unit_rate, 4))
-            p("tariff/electricity/standing_charge_ct", round(electricity_standing_charge, 4))
-            p("tariff/electricity/valid_from", agreements[0].get("validFrom", ""))
-            p("tariff/electricity/valid_to", agreements[0].get("validTo", "") or "unbegrenzt")
         log.info("Kontodaten veröffentlicht. Kontostand: %.2f EUR", account.get("balance", 0) / 100)
-
-    # -- Gas tariff ----------------------------------------------------------
-    gas_agreements = try_fetch("Gas-Tarif", client.get_gas_agreements)
-    if gas_agreements:
-        tariff_gas = gas_agreements[0].get("tariff", {})
-        p("tariff/gas/display_name", tariff_gas.get("displayName", ""))
-        p("tariff/gas/unit_rate_ct", round(tariff_gas.get("unitRate", 0.0), 4))
-        p("tariff/gas/standing_charge_ct", round(tariff_gas.get("standingCharge", 0.0), 4))
-        p("tariff/gas/valid_from", gas_agreements[0].get("validFrom", ""))
-        p("tariff/gas/valid_to", gas_agreements[0].get("validTo", "") or "unbegrenzt")
 
     # -- Meter info ----------------------------------------------------------
     meter_info = try_fetch("Zählerdaten", client.get_meter_info)
     if meter_info:
         for prop in meter_info.get("properties", []):
-            elec_points = prop.get("electricityMeterPoints", [])
-            if elec_points:
-                p("meter/electricity/mpan", elec_points[0].get("mpan", ""))
-                meters = elec_points[0].get("meters", [])
+            elec_malos = prop.get("electricityMalos", [])
+            if elec_malos:
+                p("meter/electricity/malo_id", elec_malos[0].get("marketLocationId", ""))
+                meters = elec_malos[0].get("meters", [])
                 if meters:
                     p("meter/electricity/serial_number", meters[0].get("serialNumber", ""))
                     p("meter/electricity/is_smart", bool(meters[0].get("smartDevices")))
-            gas_points = prop.get("gasMeterPoints", [])
-            if gas_points:
-                p("meter/gas/mprn", gas_points[0].get("mprn", ""))
-                gas_meters = gas_points[0].get("meters", [])
+            gas_malos = prop.get("gasMalos", [])
+            if gas_malos:
+                p("meter/gas/malo_id", gas_malos[0].get("marketLocationId", ""))
+                gas_meters = gas_malos[0].get("meters", [])
                 if gas_meters:
                     p("meter/gas/serial_number", gas_meters[0].get("serialNumber", ""))
 
@@ -645,7 +610,7 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
     if payments:
         p("payments/all", payments)
         p("payments/latest/amount", round(payments[0].get("amount", 0) / 100, 2))
-        p("payments/latest/date", payments[0].get("postedDate", ""))
+        p("payments/latest/date", payments[0].get("paymentDate", ""))
         p("payments/latest/type", payments[0].get("transactionType", ""))
 
     # -- Bills ---------------------------------------------------------------

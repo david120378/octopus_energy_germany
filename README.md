@@ -147,6 +147,15 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.2.4
+- Bugfix: Deutsche API-Feldnamen korrigiert (von UK-Schema auf OEG-Schema)
+  - `electricityMeterPoints` → `electricityMalos`
+  - `gasMeterPoints` → `gasMalos`
+  - `electricityAgreements` / `gasAgreements` entfernt (nicht im deutschen Schema)
+  - `postedDate` → `paymentDate` bei Zahlungen
+  - Bills-Query mit `... on InvoiceType` / `... on StatementType` Inline-Fragmenten
+  - `HalfHourlyTariff` / `StandardTariff` entfernt (unbekannte Typen im deutschen Schema)
+
 ### 0.2.3
 - Bugfix: Trailing Slash in GraphQL-URL (`/graphql/`) — verhindert Redirect-Verlust des POST-Body
 

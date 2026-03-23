@@ -65,17 +65,15 @@ QUERY_METER_CONSUMPTION_DAILY = """
 query ConsumptionDaily($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
     properties {
-      electricityMalos {
-        consumption(
-          startDate: $startDate
-          endDate: $endDate
-          grouping: DAY
-        ) {
-          startAt
-          endAt
-          value
-          unit
-        }
+      consumption(
+        startDate: $startDate
+        endDate: $endDate
+        grouping: DAY
+      ) {
+        startAt
+        endAt
+        value
+        unit
       }
     }
   }
@@ -86,17 +84,15 @@ QUERY_METER_CONSUMPTION_HALFHOUR = """
 query ConsumptionHalfHour($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
     properties {
-      electricityMalos {
-        consumption(
-          startDate: $startDate
-          endDate: $endDate
-          grouping: HALF_HOUR
-        ) {
-          startAt
-          endAt
-          value
-          unit
-        }
+      consumption(
+        startDate: $startDate
+        endDate: $endDate
+        grouping: HALF_HOUR
+      ) {
+        startAt
+        endAt
+        value
+        unit
       }
     }
   }
@@ -107,17 +103,15 @@ QUERY_METER_CONSUMPTION_MONTHLY = """
 query ConsumptionMonthly($accountNumber: String!, $startDate: String!, $endDate: String!) {
   account(accountNumber: $accountNumber) {
     properties {
-      electricityMalos {
-        consumption(
-          startDate: $startDate
-          endDate: $endDate
-          grouping: MONTH
-        ) {
-          startAt
-          endAt
-          value
-          unit
-        }
+      consumption(
+        startDate: $startDate
+        endDate: $endDate
+        grouping: MONTH
+      ) {
+        startAt
+        endAt
+        value
+        unit
       }
     }
   }
@@ -142,7 +136,7 @@ query Bills($accountNumber: String!) {
               grossTotal
               taxTotal
             }
-            transactions {
+            transactions(first: 50) {
               edges {
                 node {
                   postedDate
@@ -162,7 +156,7 @@ query Bills($accountNumber: String!) {
               grossTotal
               taxTotal
             }
-            transactions {
+            transactions(first: 50) {
               edges {
                 node {
                   postedDate
@@ -285,9 +279,8 @@ class OctopusEnergyClient:
     def _parse_consumption(self, data: dict) -> dict:
         result = {"electricity": [], "electricity_export": []}
         for prop in data.get("account", {}).get("properties", []):
-            for malo in prop.get("electricityMalos", []):
-                for entry in malo.get("consumption", []):
-                    result["electricity"].append(entry)
+            for entry in prop.get("consumption", []):
+                result["electricity"].append(entry)
         return result
 
 
@@ -328,7 +321,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.2.7",
+        "sw_version": "0.2.8",
     }
 
     sensors = [

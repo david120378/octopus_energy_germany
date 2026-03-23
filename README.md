@@ -132,6 +132,10 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.2.8
+- Bugfix: `transactions(first: 50)` Pagination in Bills-Query
+- Bugfix: `consumption` auf `properties`-Ebene verschoben (nicht auf MaLo)
+
 ### 0.2.7
 - Bugfix: `consumption` direkt auf `electricityMalos` (nicht auf `meter`)
 - Bugfix: `bills(first: 10)` Pagination hinzugefügt

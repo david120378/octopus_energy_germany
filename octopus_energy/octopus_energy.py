@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-GRAPHQL_URL = "https://api.oeg-kraken.energy/v1/graphql"
+GRAPHQL_URL = "https://api.oeg-kraken.energy/v1/graphql/"
 
 
 # ---------------------------------------------------------------------------
@@ -427,7 +427,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.2.2",
+        "sw_version": "0.2.3",
     }
 
     sensors = [

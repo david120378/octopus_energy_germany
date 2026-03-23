@@ -147,6 +147,13 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.2.2
+- Bugfix: 400-Fehler behoben durch vereinfachte Token-Query (nur `token` statt `refreshToken`)
+- Bugfix: Jede Query-Gruppe einzeln abgesichert — Fehler in einer Gruppe blockiert nicht die anderen
+- Verbessertes Error-Logging: API-Antworttext wird bei Fehler geloggt
+- Gas-Tarif, Zahlungen und Zählerdaten als separate Queries (robuster gegen fehlende Felder)
+- Authentifizierung einmalig am Anfang des Abrufzyklus
+
 ### 0.2.1
 - Bugfix: Dockerfile `--break-system-packages` für Alpine Linux pip-Kompatibilität
 

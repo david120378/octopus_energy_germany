@@ -1,6 +1,6 @@
 name: "Octopus Energy Deutschland"
 description: "Ruft Rechnungs- und Verbrauchsdaten von Octopus Energy Deutschland ab und veröffentlicht sie via MQTT."
-version: "0.2.9"
+version: "0.3.0"
 slug: "octopus_energy"
 init: false
 arch:

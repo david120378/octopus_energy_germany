@@ -38,16 +38,6 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/account/ledger/gas_ledger` | Gas-Ledger Saldo EUR |
 | `octopus_energy/account/details` | Vollständige Kontodaten (JSON) |
 
-### Tarif – Strom
-| Topic | Beschreibung |
-|-------|-------------|
-| `octopus_energy/tariff/electricity/display_name` | Tarifname |
-| `octopus_energy/tariff/electricity/unit_rate_ct` | Arbeitspreis in ct/kWh |
-| `octopus_energy/tariff/electricity/standing_charge_ct` | Grundgebühr in ct/Tag |
-| `octopus_energy/tariff/electricity/valid_from` | Tarif gültig ab |
-| `octopus_energy/tariff/electricity/valid_to` | Tarif gültig bis |
-
-
 ### Rechnungen
 | Topic | Beschreibung |
 |-------|-------------|
@@ -62,41 +52,6 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/bills/latest/pdf_url` | Temporärer PDF-Download-Link |
 | `octopus_energy/bills/latest/transactions` | Einzelposten der Rechnung (JSON) |
 
-### Verbrauch – Strom
-| Topic | Beschreibung |
-|-------|-------------|
-| `octopus_energy/consumption/electricity/today` | Heute (kWh) |
-| `octopus_energy/consumption/electricity/yesterday` | Gestern (kWh) |
-| `octopus_energy/consumption/electricity/current_month` | Aktueller Monat (kWh) |
-| `octopus_energy/consumption/electricity/last_month` | Letzter Monat (kWh) |
-| `octopus_energy/consumption/electricity/current_year` | Aktuelles Jahr (kWh) |
-| `octopus_energy/consumption/electricity/last_365_days` | Tageswerte letzte 365 Tage (JSON) |
-| `octopus_energy/consumption/electricity/monthly_12` | Monatswerte letzte 12 Monate (JSON) |
-| `octopus_energy/consumption/electricity/halfhour_2days` | 15-Min-Werte letzte 2 Tage (JSON) |
-
-### Verbrauch – Einspeisung (PV/Export)
-| Topic | Beschreibung |
-|-------|-------------|
-| `octopus_energy/consumption/electricity_export/today` | Einspeisung Heute (kWh) |
-| `octopus_energy/consumption/electricity_export/yesterday` | Einspeisung Gestern (kWh) |
-| `octopus_energy/consumption/electricity_export/last_365_days` | Tageswerte (JSON) |
-
-
-### Kosten (berechnet aus Tarif × Verbrauch)
-| Topic | Beschreibung |
-|-------|-------------|
-| `octopus_energy/cost/electricity/today` | Strom Kosten Heute (EUR) |
-| `octopus_energy/cost/electricity/yesterday` | Strom Kosten Gestern (EUR) |
-| `octopus_energy/cost/electricity/current_month` | Strom Kosten Aktueller Monat (EUR) |
-
-### Zähler
-| Topic | Beschreibung |
-|-------|-------------|
-| `octopus_energy/meter/electricity/serial_number` | Stromzähler Seriennummer |
-| `octopus_energy/meter/electricity/mpan` | MPAN |
-| `octopus_energy/meter/electricity/is_smart` | Smartmeter vorhanden |
-
-
 ### Zahlungen
 | Topic | Beschreibung |
 |-------|-------------|
@@ -109,17 +64,14 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 
 ## Home Assistant Sensoren (MQTT Discovery)
 
-Das Add-on registriert automatisch **30 Sensoren** in Home Assistant:
+Das Add-on registriert automatisch **12 Sensoren** in Home Assistant:
 
 - Konto: Kontostand, Überfälliger Betrag
-- Tarif: Arbeitspreis & Grundgebühr (Strom + Gas), Tarifname, Gültigkeitsdatum
-- Rechnungen: Brutto/Netto, Datum, Zeitraum, Anzahl, PDF-Link
-- Strom Verbrauch: Heute, Gestern, Aktueller Monat, Letzter Monat, Aktuelles Jahr
-- Strom Kosten: Heute, Gestern, Aktueller Monat
-- Einspeisung: Heute, Gestern
-- Zähler: Seriennummer Strom
+- Rechnungen: Brutto/Netto, Datum (Von/Bis), Anzahl, PDF-Link
 - Zahlungen: Letzter Betrag & Datum
 - Letzter Abruf Zeitstempel
+
+> **Hinweis:** Verbrauchsdaten (kWh) sind über die öffentliche OEG Kraken GraphQL API aktuell nicht zugänglich.
 
 ---
 
@@ -131,6 +83,11 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.3.0
+- Stabile Version: Verbrauchsdaten entfernt (kein zugänglicher Pfad im deutschen OEG-Schema)
+- Funktioniert vollständig: Kontostand, Rechnungen (inkl. PDF-Link), Zahlungen
+- 12 HA Sensoren
 
 ### 0.2.9
 - Bugfix: consumption direkt auf account.electricityMalos-Ebene (mit maloId)

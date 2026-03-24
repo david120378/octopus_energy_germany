@@ -116,6 +116,11 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.3
+- Neuer Sensor `Octopus Monatsverbrauch` mit kWh + Kosten für alle Monate der letzten 2 Jahre
+- Basis für Jahresvergleich-Karten im Dashboard
+- 32 HA Sensoren (vorher: 31)
+
 ### 0.5.2
 - Neuer Sensor `Octopus Alle Rechnungen` mit allen Rechnungen als JSON-Attribute
 - Dashboard-Karte mit klickbaren PDF-Download-Links für alle Rechnungen der letzten 2 Jahre

@@ -116,6 +116,11 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.2
+- Neuer Sensor `Octopus Alle Rechnungen` mit allen Rechnungen als JSON-Attribute
+- Dashboard-Karte mit klickbaren PDF-Download-Links für alle Rechnungen der letzten 2 Jahre
+- `bills/all` Topic jetzt als `{"items": [...]}` Objekt für HA JSON-Attribute
+
 ### 0.5.1
 - Rechnungen der letzten 2 Jahre als eigene MQTT-Topics pro Monat (`bills/YYYY-MM/...`)
 - Jede Rechnung veröffentlicht: Brutto/Netto/MwSt, Zeitraum, PDF-Link, Einzelposten

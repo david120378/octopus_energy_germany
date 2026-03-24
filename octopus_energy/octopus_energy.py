@@ -314,7 +314,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.3",
+        "sw_version": "0.5.4",
     }
 
     sensors = [
@@ -392,6 +392,20 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
          "state_topic": f"{topic_prefix}/bills/latest/pdf_url", "icon": "mdi:file-pdf-box"},
         {"name": "Octopus Anzahl Rechnungen", "unique_id": "octopus_bill_count",
          "state_topic": f"{topic_prefix}/bills/count", "icon": "mdi:counter"},
+        # Individual monthly kWh sensors (current + last year)
+        *[
+            {
+                "name": f"Octopus Verbrauch {yr}-{mo:02d}",
+                "unique_id": f"octopus_consumption_{yr}_{mo:02d}",
+                "state_topic": f"{topic_prefix}/consumption/monthly/{yr}-{mo:02d}",
+                "unit_of_measurement": "kWh",
+                "device_class": "energy",
+                "state_class": "measurement",
+                "icon": "mdi:lightning-bolt",
+            }
+            for yr in [datetime.now().year - 1, datetime.now().year]
+            for mo in range(1, 13)
+        ],
         {"name": "Octopus Monatsverbrauch", "unique_id": "octopus_consumption_monthly",
          "state_topic": f"{topic_prefix}/consumption/monthly",
          "value_template": "{{ value_json.months | length }}",
@@ -542,6 +556,10 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
                 cost = sum_cost(measurements, ym)
                 monthly.append({"month": ym, "kwh": kwh, "cost": cost})
         p("consumption/monthly", {"months": monthly})
+
+        # Individual sensors per month (for chart cards)
+        for item in monthly:
+            p(f"consumption/monthly/{item['month']}", item['kwh'])
 
         # Derive unit rate from today's cost/consumption if available
         kwh_today = sum_kwh(measurements, today_str)

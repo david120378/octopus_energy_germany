@@ -116,6 +116,11 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.4
+- 24 individuelle MQTT-Sensoren für monatlichen Verbrauch (letztes + aktuelles Jahr)
+- Basis für zuverlässige Plotly-Balkendiagramme ohne fn-Hacks
+- Topic: `consumption/monthly/YYYY-MM`
+
 ### 0.5.3
 - Neuer Sensor `Octopus Monatsverbrauch` mit kWh + Kosten für alle Monate der letzten 2 Jahre
 - Basis für Jahresvergleich-Karten im Dashboard

@@ -116,6 +116,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.7
+- Bugfix: `build.yaml` hinzugefügt — behebt Docker-Build-Fehler beim "Neu aufbauen" (`BUILD_FROM` war leer)
+
 ### 0.5.6
 - Bugfix: `last_updated` Timestamp jetzt mit Timezone-Info (`+02:00`) statt naivem Datum — behebt `unknown` Status des Timestamp-Sensors in HA
 

@@ -116,6 +116,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.6
+- Bugfix: `last_updated` Timestamp jetzt mit Timezone-Info (`+02:00`) statt naivem Datum — behebt `unknown` Status des Timestamp-Sensors in HA
+
 ### 0.5.5
 - MQTT Reconnect-Logik: Bei Verbindungsverlust wird sofort ein Neuabruf ausgelöst statt auf den 60-Minuten-Zyklus zu warten
 - Sensoren bleiben nach MQTT-Broker-Neustart nicht mehr auf `unknown`

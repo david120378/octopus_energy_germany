@@ -511,7 +511,7 @@ def try_fetch(label: str, fn):
 
 def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> None:
     p = mqtt_pub.publish
-    now = datetime.now()
+    now = datetime.now(timezone.utc).astimezone()
     today_str = now.strftime("%Y-%m-%d")
     yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 

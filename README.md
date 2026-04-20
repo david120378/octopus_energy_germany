@@ -116,6 +116,10 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.5
+- MQTT Reconnect-Logik: Bei Verbindungsverlust wird sofort ein Neuabruf ausgelöst statt auf den 60-Minuten-Zyklus zu warten
+- Sensoren bleiben nach MQTT-Broker-Neustart nicht mehr auf `unknown`
+
 ### 0.5.4
 - 24 individuelle MQTT-Sensoren für monatlichen Verbrauch (letztes + aktuelles Jahr)
 - Basis für zuverlässige Plotly-Balkendiagramme ohne fn-Hacks

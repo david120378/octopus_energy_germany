@@ -284,11 +284,32 @@ class OctopusEnergyClient:
 class MQTTPublisher:
     def __init__(self, host: str, port: int, user: str, password: str, topic_prefix: str):
         self.topic_prefix = topic_prefix
+        self.reconnected = False
+        self._connected = False
+
         self.client = mqtt.Client()
         if user:
             self.client.username_pw_set(user, password)
+        self.client.on_connect = self._on_connect
+        self.client.on_disconnect = self._on_disconnect
         self.client.connect(host, port, keepalive=60)
         self.client.loop_start()
+
+    def _on_connect(self, client, userdata, flags, rc) -> None:
+        if rc == 0:
+            if self._connected:
+                log.warning("MQTT Verbindung wiederhergestellt — sofortiger Neuabruf wird ausgelöst.")
+                self.reconnected = True
+            else:
+                self._connected = True
+                log.info("MQTT verbunden.")
+        else:
+            log.error("MQTT Verbindungsfehler: rc=%s", rc)
+
+    def _on_disconnect(self, client, userdata, rc) -> None:
+        self._connected = False
+        if rc != 0:
+            log.warning("MQTT Verbindung verloren (rc=%s). Warte auf Reconnect...", rc)
 
     def publish(self, subtopic: str, payload) -> None:
         topic = f"{self.topic_prefix}/{subtopic}"
@@ -652,8 +673,17 @@ def main() -> None:
     while True:
         log.info("Starte Datenabruf von Octopus Energy Deutschland...")
         fetch_and_publish(client, mqtt_pub)
+        mqtt_pub.reconnected = False
         log.info("Nächster Abruf in %d Minuten.", fetch_interval // 60)
-        time.sleep(fetch_interval)
+
+        # Warte in 30-Sekunden-Schritten — reagiert sofort auf MQTT-Reconnect
+        elapsed = 0
+        while elapsed < fetch_interval:
+            time.sleep(30)
+            elapsed += 30
+            if mqtt_pub.reconnected:
+                log.warning("MQTT Reconnect erkannt — starte sofortigen Neuabruf.")
+                break
 
 
 if __name__ == "__main__":

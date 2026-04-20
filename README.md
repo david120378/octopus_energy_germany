@@ -116,6 +116,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.9
+- `build.yaml` entfernt (deprecated) — Default-Base-Image direkt ins Dockerfile verschoben
+
 ### 0.5.8
 - Deprecated Architekturen `armhf`, `armv7`, `i386` aus `config.yaml` und `build.yaml` entfernt — bereinigt Supervisor-Warnungen
 

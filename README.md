@@ -116,6 +116,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.12
+- Bugfix: `bills/latest/pdf_url` und `bills/YYYY-MM/pdf_url` jetzt als JSON `{"url": "...", "filename": "..."}` — behebt „state exceeds maximum allowed length (255)" Fehler. Sensor-State zeigt nun den kurzen Dateinamen, die vollständige URL ist als Attribut abrufbar
+
 ### 0.5.11
 - Bugfix: `bills/all` Payload drastisch verkleinert — `temporaryUrl` (lange S3-URL) und `transactions` werden nicht mehr im Aggregat-Topic mitgesendet (sind bereits in `bills/YYYY-MM/*` verfügbar) — behebt HA-Recorder-Fehler „State attributes exceed maximum size of 16384 bytes"
 

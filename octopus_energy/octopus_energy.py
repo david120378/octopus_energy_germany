@@ -335,7 +335,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.11",
+        "sw_version": "0.5.12",
     }
 
     sensors = [
@@ -410,7 +410,11 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         {"name": "Octopus Letzte Rechnung Bis", "unique_id": "octopus_last_bill_to",
          "state_topic": f"{topic_prefix}/bills/latest/to_date", "icon": "mdi:calendar-end"},
         {"name": "Octopus Letzte Rechnung PDF", "unique_id": "octopus_last_bill_pdf_url",
-         "state_topic": f"{topic_prefix}/bills/latest/pdf_url", "icon": "mdi:file-pdf-box"},
+         "state_topic": f"{topic_prefix}/bills/latest/pdf_url",
+         "value_template": "{{ value_json.filename }}",
+         "json_attributes_topic": f"{topic_prefix}/bills/latest/pdf_url",
+         "json_attributes_template": "{{ value_json | tojson }}",
+         "icon": "mdi:file-pdf-box"},
         {"name": "Octopus Anzahl Rechnungen", "unique_id": "octopus_bill_count",
          "state_topic": f"{topic_prefix}/bills/count", "icon": "mdi:counter"},
         # Individual monthly kWh sensors (current + last year)
@@ -642,7 +646,9 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             p(f"bills/{key}/from_date",   bill.get("fromDate", ""))
             p(f"bills/{key}/to_date",     bill.get("toDate", ""))
             p(f"bills/{key}/bill_type",   bill.get("billType", ""))
-            p(f"bills/{key}/pdf_url",     bill.get("temporaryUrl", ""))
+            raw_url = bill.get("temporaryUrl", "")
+            fname = raw_url.split("/")[-1].split("?")[0] if raw_url else ""
+            p(f"bills/{key}/pdf_url", {"url": raw_url, "filename": fname})
             transactions = [e["node"] for e in bill.get("transactions", {}).get("edges", [])]
             p(f"bills/{key}/transactions", transactions)
 
@@ -656,7 +662,9 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             p("bills/latest/from_date",   latest.get("fromDate", ""))
             p("bills/latest/to_date",     latest.get("toDate", ""))
             p("bills/latest/bill_type",   latest.get("billType", ""))
-            p("bills/latest/pdf_url",     latest.get("temporaryUrl", ""))
+            raw_url = latest.get("temporaryUrl", "")
+            fname = raw_url.split("/")[-1].split("?")[0] if raw_url else ""
+            p("bills/latest/pdf_url", {"url": raw_url, "filename": fname})
             log.info("Rechnungen veröffentlicht: %d Stück. Letzte: %.2f EUR",
                      len(recent_bills), charges.get("grossTotal", 0) / 100)
 

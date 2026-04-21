@@ -335,7 +335,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.4",
+        "sw_version": "0.5.10",
     }
 
     sensors = [
@@ -435,7 +435,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
          "icon": "mdi:chart-bar"},
         {"name": "Octopus Alle Rechnungen", "unique_id": "octopus_bills_all",
          "state_topic": f"{topic_prefix}/bills/all",
-         "value_template": "{{ value_json.items | length }}",
+         "value_template": "{{ value_json.bills | length }}",
          "json_attributes_topic": f"{topic_prefix}/bills/all",
          "json_attributes_template": "{{ value_json | tojson }}",
          "icon": "mdi:file-document-multiple"},
@@ -613,7 +613,7 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             if b.get("issuedDate", "9999") >= cutoff.strftime("%Y-%m-%d")
         ]
         p("bills/count", len(recent_bills))
-        p("bills/all", {"items": recent_bills})
+        p("bills/all", {"bills": recent_bills})
 
         for bill in recent_bills:
             issued = bill.get("issuedDate", "")

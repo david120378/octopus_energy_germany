@@ -116,6 +116,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.10
+- Bugfix: `bills/all` JSON-Key von `"items"` auf `"bills"` umbenannt — verhindert `TypeError: object of type 'builtin_function_or_method' has no len()` im HA-Sensor-Template (Jinja2 behandelt `.items` als Python-Dict-Methode statt als JSON-Key)
+
 ### 0.5.9
 - `build.yaml` entfernt (deprecated) — Default-Base-Image direkt ins Dockerfile verschoben
 

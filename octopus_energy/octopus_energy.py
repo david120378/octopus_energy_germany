@@ -335,7 +335,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.10",
+        "sw_version": "0.5.11",
     }
 
     sensors = [
@@ -613,7 +613,21 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             if b.get("issuedDate", "9999") >= cutoff.strftime("%Y-%m-%d")
         ]
         p("bills/count", len(recent_bills))
-        p("bills/all", {"bills": recent_bills})
+        # Nur Summary-Felder — temporaryUrl und transactions werden NICHT
+        # mitgeschickt (bereits in bills/YYYY-MM/* Topics), um das
+        # HA-Recorder-Limit von 16 384 Bytes nicht zu überschreiten.
+        bills_summary = [
+            {
+                "id": b.get("id"),
+                "billType": b.get("billType"),
+                "fromDate": b.get("fromDate"),
+                "toDate": b.get("toDate"),
+                "issuedDate": b.get("issuedDate"),
+                "totalCharges": b.get("totalCharges", {}),
+            }
+            for b in recent_bills
+        ]
+        p("bills/all", {"bills": bills_summary})
 
         for bill in recent_bills:
             issued = bill.get("issuedDate", "")

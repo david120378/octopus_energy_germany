@@ -116,6 +116,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.11
+- Bugfix: `bills/all` Payload drastisch verkleinert — `temporaryUrl` (lange S3-URL) und `transactions` werden nicht mehr im Aggregat-Topic mitgesendet (sind bereits in `bills/YYYY-MM/*` verfügbar) — behebt HA-Recorder-Fehler „State attributes exceed maximum size of 16384 bytes"
+
 ### 0.5.10
 - Bugfix: `bills/all` JSON-Key von `"items"` auf `"bills"` umbenannt — verhindert `TypeError: object of type 'builtin_function_or_method' has no len()` im HA-Sensor-Template (Jinja2 behandelt `.items` als Python-Dict-Methode statt als JSON-Key)
 

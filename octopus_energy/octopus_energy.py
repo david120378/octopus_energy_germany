@@ -335,7 +335,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.12",
+        "sw_version": "0.5.13",
     }
 
     sensors = [
@@ -425,7 +425,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
                 "state_topic": f"{topic_prefix}/consumption/monthly/{yr}-{mo:02d}",
                 "unit_of_measurement": "kWh",
                 "device_class": "energy",
-                "state_class": "measurement",
+                "state_class": "total",
                 "icon": "mdi:lightning-bolt",
             }
             for yr in [datetime.now().year - 1, datetime.now().year]

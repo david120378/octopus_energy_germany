@@ -116,6 +116,9 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.13
+- Bugfix: `state_class` der monatlichen Verbrauchssensoren von `measurement` auf `total` korrigiert — behebt HA-Warnung „state class 'measurement' is impossible considering device class 'energy'"
+
 ### 0.5.12
 - Bugfix: `bills/latest/pdf_url` und `bills/YYYY-MM/pdf_url` jetzt als JSON `{"url": "...", "filename": "..."}` — behebt „state exceeds maximum allowed length (255)" Fehler. Sensor-State zeigt nun den kurzen Dateinamen, die vollständige URL ist als Attribut abrufbar
 

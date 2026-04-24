@@ -129,6 +129,11 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.14
+- Neu: Ordner `dashboard/` mit fertigen HA-Karten als YAML
+  - `rechnungen_karte.yaml`: Markdown-Karte mit allen Rechnungen (Monat, kWh, Brutto EUR)
+  - `konto_uebersicht.yaml`: Entities-Karte für Kontostand, Verbrauch, Kosten, letzte Rechnung
+
 ### 0.5.13
 - Bugfix: `state_class` der monatlichen Verbrauchssensoren von `measurement` auf `total` korrigiert — behebt HA-Warnung „state class 'measurement' is impossible considering device class 'energy'"
 

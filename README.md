@@ -93,6 +93,19 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 
 ---
 
+## Dashboard-Karten
+
+Fertige Karten für das HA-Dashboard liegen im Ordner [`dashboard/`](dashboard/):
+
+| Datei | Beschreibung |
+|-------|-------------|
+| [`rechnungen_karte.yaml`](dashboard/rechnungen_karte.yaml) | Markdown-Karte: alle Rechnungen mit Monat, kWh und Bruttokosten |
+| [`konto_uebersicht.yaml`](dashboard/konto_uebersicht.yaml) | Entities-Karte: Kontostand, Verbrauch, Kosten, letzte Rechnung |
+
+**Verwendung:** HA Dashboard → Karte hinzufügen → ⋮ → YAML-Editor → Inhalt der Datei einfügen.
+
+---
+
 ## Home Assistant Sensoren (MQTT Discovery)
 
 Das Add-on registriert automatisch **28 Sensoren** in Home Assistant:

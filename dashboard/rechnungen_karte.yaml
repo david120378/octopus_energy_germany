@@ -1,0 +1,30 @@
+# Octopus Energy – Rechnungsübersicht (Markdown-Karte)
+#
+# Verwendung:
+#   HA Dashboard → Karte hinzufügen → YAML-Editor → diesen Inhalt einfügen
+#
+# Zeigt alle Rechnungen der letzten 2 Jahre sortiert nach Datum (neueste zuerst)
+# mit Monat, Verbrauch (kWh) und Bruttokosten (EUR).
+#
+# Benötigte Sensoren (werden vom Add-on automatisch angelegt):
+#   - sensor.octopus_energy_deutschland_octopus_alle_rechnungen
+#   - sensor.octopus_energy_deutschland_octopus_monatsverbrauch
+
+type: markdown
+title: Rechnungen
+content: >-
+  {% set bills = state_attr('sensor.octopus_energy_deutschland_octopus_alle_rechnungen', 'bills') %}
+  {% set monthly = state_attr('sensor.octopus_energy_deutschland_octopus_monatsverbrauch', 'months') %}
+  {% if bills %}
+  {% for bill in bills | sort(attribute='fromDate', reverse=true) %}
+  {% set gross = (bill.totalCharges.grossTotal / 100) | round(2) %}
+  {% set bill_month = bill.fromDate[:7] %}
+  {% set kwh_data = monthly | selectattr('month', 'eq', bill_month) | list | first | default(none) %}
+  {% set kwh = kwh_data.kwh | round(1) if kwh_data else '–' %}
+  **{{ bill_month }}** · {{ kwh }} kWh · {{ gross }} €
+
+  ---
+  {% endfor %}
+  {% else %}
+  _Keine Rechnungsdaten verfügbar_
+  {% endif %}

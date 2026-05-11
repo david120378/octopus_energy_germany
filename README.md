@@ -103,8 +103,6 @@ Fertige Karten für das HA-Dashboard liegen im Ordner [`dashboard/`](dashboard/)
 |-------|-------------|
 | [`rechnungen_karte.yaml`](dashboard/rechnungen_karte.yaml) | Markdown-Karte: alle Rechnungen mit Monat, kWh und Bruttokosten |
 | [`konto_uebersicht.yaml`](dashboard/konto_uebersicht.yaml) | Entities-Karte: Kontostand, Verbrauch, Kosten, letzte Rechnung |
-| [`jahresvergleich_verbrauch.yaml`](dashboard/jahresvergleich_verbrauch.yaml) | Plotly-Karte: Verbrauch (kWh) Vorjahr vs. aktuelles Jahr |
-| [`jahresvergleich_kosten.yaml`](dashboard/jahresvergleich_kosten.yaml) | Plotly-Karte: Kosten (EUR) Vorjahr vs. aktuelles Jahr |
 
 **Verwendung:** HA Dashboard → Karte hinzufügen → ⋮ → YAML-Editor → Inhalt der Datei einfügen.
 
@@ -142,7 +140,6 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ### 0.5.16
 - Neu: `state_class: total` auf `current_month` / `last_month` / `current_year` / `last_year` Sensoren (Verbrauch + Kosten) — HA zeichnet ab sofort Long-Term-Statistics auf → `statistics-graph` Karte nutzbar
-- Neu: Plotly-Dashboard-Karten `jahresvergleich_verbrauch.yaml` und `jahresvergleich_kosten.yaml` — gruppierter Balkenvergleich Vorjahr vs. aktuelles Jahr (dynamisch, kein jährliches Anpassen nötig)
 
 ### 0.5.15
 - Neu: 24 individuelle monatliche Kosten-Sensoren (`cost/monthly/YYYY-MM`, EUR) für aktuelles und letztes Jahr
@@ -183,12 +180,10 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ### 0.5.4
 - 24 individuelle MQTT-Sensoren für monatlichen Verbrauch (letztes + aktuelles Jahr)
-- Basis für zuverlässige Plotly-Balkendiagramme ohne fn-Hacks
 - Topic: `consumption/monthly/YYYY-MM`
 
 ### 0.5.3
 - Neuer Sensor `Octopus Monatsverbrauch` mit kWh + Kosten für alle Monate der letzten 2 Jahre
-- Basis für Jahresvergleich-Karten im Dashboard
 - 32 HA Sensoren (vorher: 31)
 
 ### 0.5.2

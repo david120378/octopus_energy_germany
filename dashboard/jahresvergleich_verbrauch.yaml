@@ -1,0 +1,66 @@
+# Octopus Energy – Jahresvergleich Stromverbrauch (Plotly-Karte)
+#
+# Verwendung:
+#   HA Dashboard → Karte hinzufügen → YAML-Editor → diesen Inhalt einfügen
+#
+# Zeigt den monatlichen Verbrauch (kWh) als gruppierten Balkenvergleich
+# für das aktuelle und das vorherige Jahr.
+#
+# Benötigter Sensor: sensor.octopus_energy_deutschland_octopus_monatsverbrauch
+# Voraussetzung: custom:plotly-graph (HACS) muss installiert sein.
+
+type: custom:plotly-graph
+title: Jahresvergleich Stromverbrauch
+hours_to_show: 1
+refresh_interval: 3600
+layout:
+  barmode: group
+  legend:
+    orientation: h
+    y: -0.15
+  xaxis:
+    type: category
+    title:
+      text: Monat
+  yaxis:
+    title:
+      text: kWh
+    ticksuffix: " kWh"
+  margin:
+    t: 40
+    b: 60
+entities:
+  - entity: sensor.octopus_energy_deutschland_octopus_monatsverbrauch
+    name: Vorjahr
+    type: bar
+    marker:
+      color: "#44739e"
+      opacity: 0.85
+    fn: >-
+      ({ hass }) => {
+        const all = hass.states['sensor.octopus_energy_deutschland_octopus_monatsverbrauch']?.attributes?.months ?? [];
+        const yr = String(new Date().getFullYear() - 1);
+        const d = all.filter(m => m.month.startsWith(yr));
+        return {
+          name: yr,
+          x: d.map(m => m.month.slice(5)),
+          y: d.map(m => +(m.kwh || 0).toFixed(1))
+        };
+      }
+  - entity: sensor.octopus_energy_deutschland_octopus_monatsverbrauch
+    name: Aktuelles Jahr
+    type: bar
+    marker:
+      color: "#f4a522"
+      opacity: 0.85
+    fn: >-
+      ({ hass }) => {
+        const all = hass.states['sensor.octopus_energy_deutschland_octopus_monatsverbrauch']?.attributes?.months ?? [];
+        const yr = String(new Date().getFullYear());
+        const d = all.filter(m => m.month.startsWith(yr));
+        return {
+          name: yr,
+          x: d.map(m => m.month.slice(5)),
+          y: d.map(m => +(m.kwh || 0).toFixed(1))
+        };
+      }

@@ -38,10 +38,6 @@ query Account($accountNumber: String!) {
     number
     balance
     overdueBalance
-    ledgers {
-      balance
-      ledgerType
-    }
     properties {
       id
     }
@@ -52,12 +48,11 @@ query Account($accountNumber: String!) {
 QUERY_PAYMENTS = """
 query Payments($accountNumber: String!) {
   account(accountNumber: $accountNumber) {
-    payments(first: 20) {
+    payments(first: 5) {
       edges {
         node {
           amount
           paymentDate
-          transactionType
         }
       }
     }
@@ -76,45 +71,16 @@ query Bills($accountNumber: String!) {
           fromDate
           toDate
           issuedDate
-          temporaryUrl
           ... on InvoiceType {
             totalCharges {
               netTotal
               grossTotal
-              taxTotal
-            }
-            transactions(first: 50) {
-              edges {
-                node {
-                  postedDate
-                  amounts {
-                    net
-                    tax
-                    gross
-                  }
-                  title
-                }
-              }
             }
           }
           ... on StatementType {
             totalCharges {
               netTotal
               grossTotal
-              taxTotal
-            }
-            transactions(first: 50) {
-              edges {
-                node {
-                  postedDate
-                  amounts {
-                    net
-                    tax
-                    gross
-                  }
-                  title
-                }
-              }
             }
           }
         }
@@ -147,27 +113,6 @@ query getAccountMeasurements(
           unit
           ... on IntervalMeasurementType {
             startAt
-            endAt
-            durationInSeconds
-          }
-          metaData {
-            statistics {
-              costExclTax {
-                pricePerUnit {
-                  amount
-                }
-                costCurrency
-                estimatedAmount
-              }
-              costInclTax {
-                costCurrency
-                estimatedAmount
-              }
-              value
-              description
-              label
-              type
-            }
           }
         }
       }
@@ -238,7 +183,6 @@ class OctopusEnergyClient:
     def get_account(self) -> dict:
         data = self._query(QUERY_ACCOUNT, {"accountNumber": self.account_number})
         account = data.get("account", {})
-        # Cache property ID
         properties = account.get("properties", [])
         if properties and not self.property_id:
             self.property_id = str(properties[0].get("id", ""))
@@ -255,7 +199,7 @@ class OctopusEnergyClient:
         edges = data.get("account", {}).get("bills", {}).get("edges", [])
         return [edge["node"] for edge in edges]
 
-    def get_measurements(self, days_back: int = 400, frequency: str = "DAY_INTERVAL") -> list:
+    def get_measurements(self, days_back: int = 400) -> list:
         if not self.property_id:
             raise RuntimeError("Property ID nicht verfügbar – Kontodaten zuerst abrufen.")
 
@@ -270,7 +214,7 @@ class OctopusEnergyClient:
                 "startAt": start_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "endAt": now_utc.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "timezone": TIMEZONE,
-                "utilityFilters": [{"electricityFilters": {"readingFrequencyType": frequency}}],
+                "utilityFilters": [{"electricityFilters": {"readingFrequencyType": "DAY_INTERVAL"}}],
             },
         )
         edges = data.get("property", {}).get("measurements", {}).get("edges", [])
@@ -329,148 +273,92 @@ class MQTTPublisher:
 # Home Assistant MQTT Discovery
 # ---------------------------------------------------------------------------
 
+# Sensor-IDs die in früheren Versionen existierten und jetzt entfernt werden.
+# Leere Payloads löschen die Discovery-Einträge aus HA.
+_REMOVED_UNIQUE_IDS = [
+    "octopus_consumption_today",
+    "octopus_consumption_yesterday",
+    "octopus_consumption_current_week",
+    "octopus_consumption_last_week",
+    "octopus_consumption_current_month",
+    "octopus_consumption_last_month",
+    "octopus_consumption_current_year",
+    "octopus_consumption_last_year",
+    "octopus_cost_today",
+    "octopus_cost_yesterday",
+    "octopus_cost_current_week",
+    "octopus_cost_last_week",
+    "octopus_cost_last_month",
+    "octopus_cost_last_year",
+    "octopus_last_bill_net",
+    "octopus_last_bill_from",
+    "octopus_last_bill_to",
+    "octopus_last_bill_pdf_url",
+    "octopus_bill_count",
+    "octopus_consumption_monthly",
+    "octopus_last_payment_date",
+    *[f"octopus_consumption_{yr}_{mo:02d}"
+      for yr in [datetime.now().year - 1, datetime.now().year]
+      for mo in range(1, 13)],
+    *[f"octopus_cost_{yr}_{mo:02d}"
+      for yr in [datetime.now().year - 1, datetime.now().year]
+      for mo in range(1, 13)],
+]
+
+
 def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
     device = {
         "identifiers": ["octopus_energy_de"],
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.18",
+        "sw_version": "0.6.0",
     }
 
     sensors = [
-        # Account
+        # Konto
         {"name": "Octopus Kontostand", "unique_id": "octopus_account_balance",
          "state_topic": f"{topic_prefix}/account/balance", "unit_of_measurement": "EUR",
          "device_class": "monetary", "icon": "mdi:cash"},
         {"name": "Octopus Überfälliger Betrag", "unique_id": "octopus_overdue_balance",
          "state_topic": f"{topic_prefix}/account/overdue_balance", "unit_of_measurement": "EUR",
          "device_class": "monetary", "icon": "mdi:cash-alert"},
-        # Consumption
-        {"name": "Octopus Strom Verbrauch Heute", "unique_id": "octopus_consumption_today",
-         "state_topic": f"{topic_prefix}/consumption/today", "unit_of_measurement": "kWh",
-         "device_class": "energy", "icon": "mdi:lightning-bolt"},
-        {"name": "Octopus Strom Verbrauch Gestern", "unique_id": "octopus_consumption_yesterday",
-         "state_topic": f"{topic_prefix}/consumption/yesterday", "unit_of_measurement": "kWh",
-         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
-        {"name": "Octopus Strom Verbrauch Aktuelle Woche", "unique_id": "octopus_consumption_current_week",
-         "state_topic": f"{topic_prefix}/consumption/current_week", "unit_of_measurement": "kWh",
-         "device_class": "energy", "icon": "mdi:lightning-bolt"},
-        {"name": "Octopus Strom Verbrauch Letzte Woche", "unique_id": "octopus_consumption_last_week",
-         "state_topic": f"{topic_prefix}/consumption/last_week", "unit_of_measurement": "kWh",
-         "device_class": "energy", "icon": "mdi:lightning-bolt-outline"},
-        {"name": "Octopus Strom Verbrauch Aktueller Monat", "unique_id": "octopus_consumption_current_month",
-         "state_topic": f"{topic_prefix}/consumption/current_month", "unit_of_measurement": "kWh",
-         "device_class": "energy", "state_class": "total", "icon": "mdi:lightning-bolt"},
-        {"name": "Octopus Strom Verbrauch Letzter Monat", "unique_id": "octopus_consumption_last_month",
-         "state_topic": f"{topic_prefix}/consumption/last_month", "unit_of_measurement": "kWh",
-         "device_class": "energy", "state_class": "total", "icon": "mdi:lightning-bolt-outline"},
-        {"name": "Octopus Strom Verbrauch Aktuelles Jahr", "unique_id": "octopus_consumption_current_year",
-         "state_topic": f"{topic_prefix}/consumption/current_year", "unit_of_measurement": "kWh",
-         "device_class": "energy", "state_class": "total", "icon": "mdi:lightning-bolt"},
-        {"name": "Octopus Strom Verbrauch Letztes Jahr", "unique_id": "octopus_consumption_last_year",
-         "state_topic": f"{topic_prefix}/consumption/last_year", "unit_of_measurement": "kWh",
-         "device_class": "energy", "state_class": "total", "icon": "mdi:lightning-bolt-outline"},
-        # Cost (incl. tax)
-        {"name": "Octopus Strom Kosten Heute", "unique_id": "octopus_cost_today",
-         "state_topic": f"{topic_prefix}/cost/today", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Gestern", "unique_id": "octopus_cost_yesterday",
-         "state_topic": f"{topic_prefix}/cost/yesterday", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Aktuelle Woche", "unique_id": "octopus_cost_current_week",
-         "state_topic": f"{topic_prefix}/cost/current_week", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Letzte Woche", "unique_id": "octopus_cost_last_week",
-         "state_topic": f"{topic_prefix}/cost/last_week", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
+        # Zählerstand — Basis für HA Long-Term Statistics (Tag / Monat / Jahr)
+        {"name": "Octopus Strom Zählerstand", "unique_id": "octopus_consumption_cumulative",
+         "state_topic": f"{topic_prefix}/consumption/cumulative",
+         "unit_of_measurement": "kWh", "device_class": "energy", "state_class": "total",
+         "icon": "mdi:counter"},
+        # Kosten (aus Rechnungen)
         {"name": "Octopus Strom Kosten Aktueller Monat", "unique_id": "octopus_cost_current_month",
          "state_topic": f"{topic_prefix}/cost/current_month", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "state_class": "total", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Letzter Monat", "unique_id": "octopus_cost_last_month",
-         "state_topic": f"{topic_prefix}/cost/last_month", "unit_of_measurement": "EUR",
          "device_class": "monetary", "state_class": "total", "icon": "mdi:currency-eur"},
         {"name": "Octopus Strom Kosten Aktuelles Jahr", "unique_id": "octopus_cost_current_year",
          "state_topic": f"{topic_prefix}/cost/current_year", "unit_of_measurement": "EUR",
          "device_class": "monetary", "state_class": "total", "icon": "mdi:currency-eur"},
-        {"name": "Octopus Strom Kosten Letztes Jahr", "unique_id": "octopus_cost_last_year",
-         "state_topic": f"{topic_prefix}/cost/last_year", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:currency-eur"},
-        # Bills
+        # Tarif
+        {"name": "Octopus Arbeitspreis", "unique_id": "octopus_unit_rate",
+         "state_topic": f"{topic_prefix}/tariff/unit_rate", "unit_of_measurement": "EUR/kWh",
+         "icon": "mdi:tag"},
+        # Rechnungen
         {"name": "Octopus Letzte Rechnung (Brutto)", "unique_id": "octopus_last_bill_gross",
          "state_topic": f"{topic_prefix}/bills/latest/gross_total", "unit_of_measurement": "EUR",
          "device_class": "monetary", "icon": "mdi:receipt"},
-        {"name": "Octopus Letzte Rechnung (Netto)", "unique_id": "octopus_last_bill_net",
-         "state_topic": f"{topic_prefix}/bills/latest/net_total", "unit_of_measurement": "EUR",
-         "device_class": "monetary", "icon": "mdi:receipt-outline"},
         {"name": "Octopus Letzte Rechnung Datum", "unique_id": "octopus_last_bill_date",
          "state_topic": f"{topic_prefix}/bills/latest/issued_date", "icon": "mdi:calendar"},
-        {"name": "Octopus Letzte Rechnung Von", "unique_id": "octopus_last_bill_from",
-         "state_topic": f"{topic_prefix}/bills/latest/from_date", "icon": "mdi:calendar-start"},
-        {"name": "Octopus Letzte Rechnung Bis", "unique_id": "octopus_last_bill_to",
-         "state_topic": f"{topic_prefix}/bills/latest/to_date", "icon": "mdi:calendar-end"},
-        {"name": "Octopus Letzte Rechnung PDF", "unique_id": "octopus_last_bill_pdf_url",
-         "state_topic": f"{topic_prefix}/bills/latest/pdf_url",
-         "value_template": "{{ value_json.filename }}",
-         "json_attributes_topic": f"{topic_prefix}/bills/latest/pdf_url",
-         "json_attributes_template": "{{ value_json | tojson }}",
-         "icon": "mdi:file-pdf-box"},
-        {"name": "Octopus Anzahl Rechnungen", "unique_id": "octopus_bill_count",
-         "state_topic": f"{topic_prefix}/bills/count", "icon": "mdi:counter"},
-        # Individual monthly kWh sensors (current + last year)
-        *[
-            {
-                "name": f"Octopus Verbrauch {yr}-{mo:02d}",
-                "unique_id": f"octopus_consumption_{yr}_{mo:02d}",
-                "state_topic": f"{topic_prefix}/consumption/monthly/{yr}-{mo:02d}",
-                "unit_of_measurement": "kWh",
-                "device_class": "energy",
-                "state_class": "total",
-                "icon": "mdi:lightning-bolt",
-            }
-            for yr in [datetime.now().year - 1, datetime.now().year]
-            for mo in range(1, 13)
-        ],
-        # Individual monthly cost sensors (current + last year)
-        *[
-            {
-                "name": f"Octopus Kosten {yr}-{mo:02d}",
-                "unique_id": f"octopus_cost_{yr}_{mo:02d}",
-                "state_topic": f"{topic_prefix}/cost/monthly/{yr}-{mo:02d}",
-                "unit_of_measurement": "EUR",
-                "device_class": "monetary",
-                "state_class": "total",
-                "icon": "mdi:currency-eur",
-            }
-            for yr in [datetime.now().year - 1, datetime.now().year]
-            for mo in range(1, 13)
-        ],
-        {"name": "Octopus Monatsverbrauch", "unique_id": "octopus_consumption_monthly",
-         "state_topic": f"{topic_prefix}/consumption/monthly",
-         "value_template": "{{ value_json.months | length }}",
-         "json_attributes_topic": f"{topic_prefix}/consumption/monthly",
-         "json_attributes_template": "{{ value_json | tojson }}",
-         "icon": "mdi:chart-bar"},
         {"name": "Octopus Alle Rechnungen", "unique_id": "octopus_bills_all",
          "state_topic": f"{topic_prefix}/bills/all",
          "value_template": "{{ value_json.bills | length }}",
          "json_attributes_topic": f"{topic_prefix}/bills/all",
          "json_attributes_template": "{{ value_json | tojson }}",
          "icon": "mdi:file-document-multiple"},
-        # Payments
+        # Zahlungen
         {"name": "Octopus Letzte Zahlung", "unique_id": "octopus_last_payment",
          "state_topic": f"{topic_prefix}/payments/latest/amount", "unit_of_measurement": "EUR",
          "device_class": "monetary", "icon": "mdi:bank-transfer"},
-        {"name": "Octopus Letzte Zahlung Datum", "unique_id": "octopus_last_payment_date",
-         "state_topic": f"{topic_prefix}/payments/latest/date", "icon": "mdi:calendar-check"},
         # Meta
         {"name": "Octopus Letzter Abruf", "unique_id": "octopus_last_updated",
          "state_topic": f"{topic_prefix}/last_updated", "device_class": "timestamp",
          "icon": "mdi:clock-check"},
-        # Tariff info
-        {"name": "Octopus Arbeitspreis", "unique_id": "octopus_unit_rate",
-         "state_topic": f"{topic_prefix}/tariff/unit_rate", "unit_of_measurement": "EUR/kWh",
-         "icon": "mdi:tag"},
     ]
 
     for sensor in sensors:
@@ -478,41 +366,25 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         discovery_topic = f"homeassistant/sensor/{sensor['unique_id']}/config"
         mqtt_pub.client.publish(discovery_topic, json.dumps(sensor), retain=True)
 
-    log.info("Home Assistant MQTT Discovery: %d Sensoren registriert.", len(sensors))
+    # Alte Discovery-Einträge aus früheren Versionen löschen
+    for uid in _REMOVED_UNIQUE_IDS:
+        mqtt_pub.client.publish(f"homeassistant/sensor/{uid}/config", "", retain=True)
+
+    log.info("Home Assistant MQTT Discovery: %d Sensoren registriert, %d alte entfernt.",
+             len(sensors), len(_REMOVED_UNIQUE_IDS))
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def sum_kwh(entries: list, date_keys) -> float:
-    """Sum kWh for entries whose startAt date matches date_keys (prefix str or set of YYYY-MM-DD)."""
-    if isinstance(date_keys, str):
-        match = lambda s: s.startswith(date_keys)
-    else:
-        match = lambda s: s[:10] in date_keys
-    return round(sum(float(e.get("value", 0)) for e in entries if match(e.get("startAt", ""))), 3)
-
-
-def sum_cost(entries: list, date_keys) -> float:
-    """Sum cost incl. tax (EUR) for entries whose startAt date matches date_keys."""
-    if isinstance(date_keys, str):
-        match = lambda s: s.startswith(date_keys)
-    else:
-        match = lambda s: s[:10] in date_keys
-    total = 0.0
-    for e in entries:
-        if not match(e.get("startAt", "")):
-            continue
-        for stat in e.get("metaData", {}).get("statistics", []):
-            incl = stat.get("costInclTax", {})
-            if incl.get("estimatedAmount") is not None:
-                total += float(incl["estimatedAmount"])
-    return round(total / 100, 2)
-
-
-def week_dates(monday: datetime) -> set:
-    return {(monday + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)}
+def sum_kwh(entries: list, date_prefix: str) -> float:
+    """Summiert kWh für alle Einträge deren startAt mit date_prefix beginnt."""
+    return round(
+        sum(float(e.get("value", 0)) for e in entries
+            if e.get("startAt", "").startswith(date_prefix)),
+        3,
+    )
 
 
 def try_fetch(label: str, fn):
@@ -530,19 +402,9 @@ def try_fetch(label: str, fn):
 def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> None:
     p = mqtt_pub.publish
     now = datetime.now(timezone.utc).astimezone()
-    today_str = now.strftime("%Y-%m-%d")
-    yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
-
-    # Week: Monday-based
-    cur_mon = now - timedelta(days=now.weekday())
-    last_mon = cur_mon - timedelta(days=7)
-    cur_week = week_dates(cur_mon)
-    last_week = week_dates(last_mon)
-
     cur_month = now.strftime("%Y-%m")
-    last_month = (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
     cur_year = now.strftime("%Y")
-    last_year = str(now.year - 1)
+    last_month = (now.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
 
     try:
         client.ensure_authenticated()
@@ -550,60 +412,30 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         log.error("Authentifizierung fehlgeschlagen: %s", exc)
         return
 
-    # -- Account (also caches property_id) -----------------------------------
+    # -- Account --
     account = try_fetch("Kontodaten", client.get_account)
     if account:
         p("account/balance", round(account.get("balance", 0) / 100, 2))
         p("account/overdue_balance", round(account.get("overdueBalance", 0) / 100, 2))
-        p("account/details", account)
-        for ledger in account.get("ledgers", []):
-            p(f"account/ledger/{ledger.get('ledgerType','').lower()}", round(ledger.get("balance", 0) / 100, 2))
-        log.info("Kontodaten veröffentlicht. Kontostand: %.2f EUR", account.get("balance", 0) / 100)
+        log.info("Kontostand: %.2f EUR", account.get("balance", 0) / 100)
 
-    # -- Measurements (Verbrauch kWh; Kosten kommen aus Bills, nicht aus Measurements) --
+    # -- Measurements → kumulativer Zählerstand (Basis für HA-Statistiken) --
     measurements = try_fetch(
         "Verbrauchsdaten",
-        lambda: client.get_measurements(days_back=400, frequency="DAY_INTERVAL"),
+        lambda: client.get_measurements(days_back=400),
     )
-    monthly = []  # wird unten befüllt, im Bills-Block benötigt
     if measurements:
-        # Consumption (kWh)
-        p("consumption/today",        sum_kwh(measurements, today_str))
-        p("consumption/yesterday",    sum_kwh(measurements, yesterday_str))
-        p("consumption/current_week", sum_kwh(measurements, cur_week))
-        p("consumption/last_week",    sum_kwh(measurements, last_week))
-        p("consumption/current_month",sum_kwh(measurements, cur_month))
-        p("consumption/last_month",   sum_kwh(measurements, last_month))
-        p("consumption/current_year", sum_kwh(measurements, cur_year))
-        p("consumption/last_year",    sum_kwh(measurements, last_year))
+        cumulative_kwh = round(sum(float(e.get("value", 0)) for e in measurements), 3)
+        p("consumption/cumulative", cumulative_kwh)
+        log.info("Zählerstand: %.3f kWh (aus %d Tagen)", cumulative_kwh, len(measurements))
 
-        # Monatliche kWh-Aggregate (Kosten werden im Bills-Block ergänzt)
-        for yr in [last_year, cur_year]:
-            for mo in range(1, 13):
-                ym = f"{yr}-{mo:02d}"
-                monthly.append({"month": ym, "kwh": sum_kwh(measurements, ym), "cost": 0})
-
-        # Individuelle kWh-Sensoren pro Monat
-        for item in monthly:
-            p(f"consumption/monthly/{item['month']}", item['kwh'])
-
-        log.info(
-            "Verbrauch: Heute %.3f kWh | Monat %.3f kWh | Jahr %.3f kWh",
-            sum_kwh(measurements, today_str),
-            sum_kwh(measurements, cur_month),
-            sum_kwh(measurements, cur_year),
-        )
-
-    # -- Payments ------------------------------------------------------------
+    # -- Payments --
     payments = try_fetch("Zahlungen", client.get_payments)
     if payments:
-        p("payments/all", payments)
         p("payments/latest/amount", round(payments[0].get("amount", 0) / 100, 2))
-        p("payments/latest/date", payments[0].get("paymentDate", ""))
-        p("payments/latest/type", payments[0].get("transactionType", ""))
-        log.info("Zahlungen veröffentlicht. Letzte: %.2f EUR", payments[0].get("amount", 0) / 100)
+        log.info("Letzte Zahlung: %.2f EUR", payments[0].get("amount", 0) / 100)
 
-    # -- Bills ---------------------------------------------------------------
+    # -- Bills --
     bills = try_fetch("Rechnungen", client.get_bills)
     if bills is not None:
         cutoff = now.replace(year=now.year - 2)
@@ -611,10 +443,7 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             b for b in bills
             if b.get("issuedDate", "9999") >= cutoff.strftime("%Y-%m-%d")
         ]
-        p("bills/count", len(recent_bills))
-        # Nur Summary-Felder — temporaryUrl und transactions werden NICHT
-        # mitgeschickt (bereits in bills/YYYY-MM/* Topics), um das
-        # HA-Recorder-Limit von 16 384 Bytes nicht zu überschreiten.
+
         bills_summary = [
             {
                 "id": b.get("id"),
@@ -628,81 +457,36 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         ]
         p("bills/all", {"bills": bills_summary})
 
-        for bill in recent_bills:
-            issued = bill.get("issuedDate", "")
-            key = issued[:7] if issued else None  # YYYY-MM
-            if not key:
-                continue
-            charges = bill.get("totalCharges", {})
-            p(f"bills/{key}/gross_total", round(charges.get("grossTotal", 0) / 100, 2))
-            p(f"bills/{key}/net_total",   round(charges.get("netTotal", 0) / 100, 2))
-            p(f"bills/{key}/tax_total",   round(charges.get("taxTotal", 0) / 100, 2))
-            p(f"bills/{key}/issued_date", issued)
-            p(f"bills/{key}/from_date",   bill.get("fromDate", ""))
-            p(f"bills/{key}/to_date",     bill.get("toDate", ""))
-            p(f"bills/{key}/bill_type",   bill.get("billType", ""))
-            raw_url = bill.get("temporaryUrl", "")
-            fname = raw_url.split("/")[-1].split("?")[0] if raw_url else ""
-            p(f"bills/{key}/pdf_url", {"url": raw_url, "filename": fname})
-            transactions = [e["node"] for e in bill.get("transactions", {}).get("edges", [])]
-            p(f"bills/{key}/transactions", transactions)
-
         if recent_bills:
             latest = recent_bills[0]
             charges = latest.get("totalCharges", {})
             p("bills/latest/gross_total", round(charges.get("grossTotal", 0) / 100, 2))
-            p("bills/latest/net_total",   round(charges.get("netTotal", 0) / 100, 2))
-            p("bills/latest/tax_total",   round(charges.get("taxTotal", 0) / 100, 2))
             p("bills/latest/issued_date", latest.get("issuedDate", ""))
-            p("bills/latest/from_date",   latest.get("fromDate", ""))
-            p("bills/latest/to_date",     latest.get("toDate", ""))
-            p("bills/latest/bill_type",   latest.get("billType", ""))
-            raw_url = latest.get("temporaryUrl", "")
-            fname = raw_url.split("/")[-1].split("?")[0] if raw_url else ""
-            p("bills/latest/pdf_url", {"url": raw_url, "filename": fname})
-            log.info("Rechnungen veröffentlicht: %d Stück. Letzte: %.2f EUR",
-                     len(recent_bills), charges.get("grossTotal", 0) / 100)
 
-        # -- Kostendaten aus Rechnungen (OEG API liefert keine Kosten in Measurements) --
-        bill_costs = {}  # YYYY-MM -> EUR (brutto, aus fromDate des Abrechnungszeitraums)
+        # Monatliche Kosten (aus fromDate)
+        bill_costs = {}
         for bill in recent_bills:
             from_key = bill.get("fromDate", "")[:7]
             if from_key:
-                bill_costs[from_key] = round(bill.get("totalCharges", {}).get("grossTotal", 0) / 100, 2)
+                bill_costs[from_key] = round(
+                    bill.get("totalCharges", {}).get("grossTotal", 0) / 100, 2
+                )
 
-        # Aggregierte Kosten-Sensoren
         p("cost/current_month", bill_costs.get(cur_month, 0))
-        p("cost/last_month",    bill_costs.get(last_month, 0))
-        p("cost/current_year",  round(sum(v for k, v in bill_costs.items() if k.startswith(cur_year)), 2))
-        p("cost/last_year",     round(sum(v for k, v in bill_costs.items() if k.startswith(last_year)), 2))
+        p("cost/current_year",
+          round(sum(v for k, v in bill_costs.items() if k.startswith(cur_year)), 2))
 
-        # Individuelle monatliche Kosten-Sensoren
-        for ym, cost in bill_costs.items():
-            p(f"cost/monthly/{ym}", cost)
-
-        # Monatsverbrauch-JSON mit korrekten Kosten aktualisieren
-        if monthly:
-            monthly_with_costs = [{**item, "cost": bill_costs.get(item["month"], 0)} for item in monthly]
-            p("consumption/monthly", {"months": monthly_with_costs})
-
-        # Arbeitspreis aus letztem vollständigen Monat (Kosten / kWh)
-        lm_cost = bill_costs.get(last_month, 0)
-        lm_kwh = sum_kwh(measurements, last_month) if measurements else 0
-        if lm_kwh > 0 and lm_cost > 0:
-            unit_rate = round(lm_cost / lm_kwh, 4)
-            p("tariff/unit_rate", unit_rate)
-            # Tägliche/wöchentliche Kosten als Näherung (kWh × Arbeitspreis)
-            if measurements:
-                p("cost/today",        round(sum_kwh(measurements, today_str) * unit_rate, 2))
-                p("cost/yesterday",    round(sum_kwh(measurements, yesterday_str) * unit_rate, 2))
-                p("cost/current_week", round(sum_kwh(measurements, cur_week) * unit_rate, 2))
-                p("cost/last_week",    round(sum_kwh(measurements, last_week) * unit_rate, 2))
+        # Arbeitspreis aus letztem vollständigen Monat
+        if measurements:
+            lm_cost = bill_costs.get(last_month, 0)
+            lm_kwh = sum_kwh(measurements, last_month)
+            if lm_kwh > 0 and lm_cost > 0:
+                p("tariff/unit_rate", round(lm_cost / lm_kwh, 4))
 
         log.info(
-            "Kosten aus Rechnungen: Monat %s=%.2f EUR | Jahr %s=%.2f EUR | Arbeitspreis=%.4f EUR/kWh",
+            "Kosten: %s=%.2f EUR | %s=%.2f EUR",
             cur_month, bill_costs.get(cur_month, 0),
             cur_year, round(sum(v for k, v in bill_costs.items() if k.startswith(cur_year)), 2),
-            lm_cost / lm_kwh if lm_kwh > 0 and lm_cost > 0 else 0,
         )
 
     p("last_updated", now.isoformat())
@@ -735,7 +519,6 @@ def main() -> None:
         mqtt_pub.reconnected = False
         log.info("Nächster Abruf in %d Minuten.", fetch_interval // 60)
 
-        # Warte in 30-Sekunden-Schritten — reagiert sofort auf MQTT-Reconnect
         elapsed = 0
         while elapsed < fetch_interval:
             time.sleep(30)

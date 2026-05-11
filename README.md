@@ -34,64 +34,30 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 |-------|-------------|
 | `octopus_energy/account/balance` | Kontostand in EUR |
 | `octopus_energy/account/overdue_balance` | Überfälliger Betrag in EUR |
-| `octopus_energy/account/ledger/electricity_ledger` | Strom-Ledger Saldo EUR |
-| `octopus_energy/account/details` | Vollständige Kontodaten (JSON) |
 
 ### Verbrauch (kWh)
 | Topic | Beschreibung |
 |-------|-------------|
-| `octopus_energy/consumption/today` | Stromverbrauch heute (kWh) |
-| `octopus_energy/consumption/yesterday` | Stromverbrauch gestern (kWh) |
-| `octopus_energy/consumption/current_week` | Stromverbrauch aktuelle Woche (kWh) |
-| `octopus_energy/consumption/last_week` | Stromverbrauch letzte Woche (kWh) |
-| `octopus_energy/consumption/current_month` | Stromverbrauch aktueller Monat (kWh) |
-| `octopus_energy/consumption/last_month` | Stromverbrauch letzter Monat (kWh) |
-| `octopus_energy/consumption/current_year` | Stromverbrauch aktuelles Jahr (kWh) |
-| `octopus_energy/consumption/last_year` | Stromverbrauch letztes Jahr (kWh) |
-| `octopus_energy/consumption/monthly/YYYY-MM` | Stromverbrauch je Monat (kWh, aktuelles + letztes Jahr) |
+| `octopus_energy/consumption/cumulative` | Kumulativer Zählerstand (kWh, Basis für HA-Statistiken) |
 
 ### Kosten (EUR inkl. MwSt)
 | Topic | Beschreibung |
 |-------|-------------|
-| `octopus_energy/cost/today` | Stromkosten heute (EUR) |
-| `octopus_energy/cost/yesterday` | Stromkosten gestern (EUR) |
-| `octopus_energy/cost/current_week` | Stromkosten aktuelle Woche (EUR) |
-| `octopus_energy/cost/last_week` | Stromkosten letzte Woche (EUR) |
-| `octopus_energy/cost/current_month` | Stromkosten aktueller Monat (EUR) |
-| `octopus_energy/cost/last_month` | Stromkosten letzter Monat (EUR) |
-| `octopus_energy/cost/current_year` | Stromkosten aktuelles Jahr (EUR) |
-| `octopus_energy/cost/last_year` | Stromkosten letztes Jahr (EUR) |
-| `octopus_energy/cost/monthly/YYYY-MM` | Stromkosten je Monat (EUR, aktuelles + letztes Jahr) |
-| `octopus_energy/tariff/unit_rate` | Arbeitspreis (EUR/kWh, aus Verbrauchsdaten berechnet) |
+| `octopus_energy/cost/current_month` | Stromkosten aktueller Monat (EUR, aus Rechnung) |
+| `octopus_energy/cost/current_year` | Stromkosten aktuelles Jahr (EUR, aus Rechnungen) |
+| `octopus_energy/tariff/unit_rate` | Arbeitspreis (EUR/kWh, aus letzter Rechnung berechnet) |
 
 ### Rechnungen
 | Topic | Beschreibung |
 |-------|-------------|
-| `octopus_energy/bills/count` | Anzahl Rechnungen (letzte 2 Jahre) |
-| `octopus_energy/bills/all` | Alle Rechnungen als JSON |
+| `octopus_energy/bills/all` | Alle Rechnungen als JSON (letzte 2 Jahre) |
 | `octopus_energy/bills/latest/gross_total` | Letzte Rechnung Brutto EUR |
-| `octopus_energy/bills/latest/net_total` | Letzte Rechnung Netto EUR |
-| `octopus_energy/bills/latest/tax_total` | Letzte Rechnung MwSt EUR |
 | `octopus_energy/bills/latest/issued_date` | Rechnungsdatum |
-| `octopus_energy/bills/latest/from_date` | Abrechnungszeitraum Von |
-| `octopus_energy/bills/latest/to_date` | Abrechnungszeitraum Bis |
-| `octopus_energy/bills/latest/pdf_url` | Temporärer PDF-Download-Link |
-| `octopus_energy/bills/YYYY-MM/gross_total` | Brutto EUR (je Monat) |
-| `octopus_energy/bills/YYYY-MM/net_total` | Netto EUR (je Monat) |
-| `octopus_energy/bills/YYYY-MM/tax_total` | MwSt EUR (je Monat) |
-| `octopus_energy/bills/YYYY-MM/issued_date` | Rechnungsdatum (je Monat) |
-| `octopus_energy/bills/YYYY-MM/from_date` | Zeitraum Von (je Monat) |
-| `octopus_energy/bills/YYYY-MM/to_date` | Zeitraum Bis (je Monat) |
-| `octopus_energy/bills/YYYY-MM/pdf_url` | PDF-Link (je Monat) |
-| `octopus_energy/bills/YYYY-MM/transactions` | Einzelposten JSON (je Monat) |
 
 ### Zahlungen
 | Topic | Beschreibung |
 |-------|-------------|
 | `octopus_energy/payments/latest/amount` | Letzte Zahlung (EUR) |
-| `octopus_energy/payments/latest/date` | Datum der letzten Zahlung |
-| `octopus_energy/payments/latest/type` | Art der Zahlung |
-| `octopus_energy/payments/all` | Alle Zahlungen (JSON) |
 
 ---
 
@@ -101,8 +67,8 @@ Fertige Karten für das HA-Dashboard liegen im Ordner [`dashboard/`](dashboard/)
 
 | Datei | Beschreibung |
 |-------|-------------|
-| [`rechnungen_karte.yaml`](dashboard/rechnungen_karte.yaml) | Markdown-Karte: alle Rechnungen mit Monat, kWh und Bruttokosten |
-| [`konto_uebersicht.yaml`](dashboard/konto_uebersicht.yaml) | Entities-Karte: Kontostand, Verbrauch, Kosten, letzte Rechnung |
+| [`rechnungen_karte.yaml`](dashboard/rechnungen_karte.yaml) | Markdown-Karte: alle Rechnungen mit Monat und Bruttokosten |
+| [`konto_uebersicht.yaml`](dashboard/konto_uebersicht.yaml) | Entities-Karte: Kontostand, Zählerstand, Kosten, letzte Rechnung |
 
 **Verwendung:** HA Dashboard → Karte hinzufügen → ⋮ → YAML-Editor → Inhalt der Datei einfügen.
 
@@ -110,15 +76,41 @@ Fertige Karten für das HA-Dashboard liegen im Ordner [`dashboard/`](dashboard/)
 
 ## Home Assistant Sensoren (MQTT Discovery)
 
-Das Add-on registriert automatisch **52 Sensoren** in Home Assistant:
+Das Add-on registriert automatisch **11 Sensoren** in Home Assistant:
 
-- Konto: Kontostand, Überfälliger Betrag
-- Verbrauch: Heute/Gestern/Aktuelle Woche/Letzte Woche/Aktueller Monat/Letzter Monat/Aktuelles Jahr/Letztes Jahr (kWh)
-- Kosten: Heute/Gestern/Aktuelle Woche/Letzte Woche/Aktueller Monat/Letzter Monat/Aktuelles Jahr/Letztes Jahr (EUR inkl. MwSt)
-- Tarif: Arbeitspreis (EUR/kWh)
-- Rechnungen: Brutto/Netto, Datum (Von/Bis), Anzahl, PDF-Link
-- Zahlungen: Letzter Betrag & Datum
-- Letzter Abruf Zeitstempel
+| Sensor | Beschreibung |
+|--------|-------------|
+| Octopus Kontostand | Kontostand in EUR |
+| Octopus Überfälliger Betrag | Überfälliger Betrag in EUR |
+| **Octopus Strom Zählerstand** | Kumulativer Verbrauch (kWh) — Basis für HA Long-Term Statistics |
+| Octopus Strom Kosten Aktueller Monat | Stromkosten laufender Monat (EUR, aus Rechnung) |
+| Octopus Strom Kosten Aktuelles Jahr | Stromkosten laufendes Jahr (EUR, Summe der Rechnungen) |
+| Octopus Arbeitspreis | EUR/kWh (aus letzter Rechnung berechnet) |
+| Octopus Letzte Rechnung (Brutto) | Letzter Rechnungsbetrag (EUR) |
+| Octopus Letzte Rechnung Datum | Datum der letzten Rechnung |
+| Octopus Alle Rechnungen | JSON mit allen Rechnungen der letzten 2 Jahre |
+| Octopus Letzte Zahlung | Letzter Zahlungseingang (EUR) |
+| Octopus Letzter Abruf | Zeitstempel des letzten API-Abrufs |
+
+### HA Long-Term Statistics
+
+Der **Zählerstand**-Sensor (`state_class: total`) ist die Basis für alle zeitlichen Auswertungen in HA:
+
+- **Tag**: `statistics-graph`-Karte mit `period: day` → Tagesverbrauch
+- **Monat**: `statistics-graph`-Karte mit `period: month` → Monatsverbrauch
+- **Jahr**: `statistics-graph`-Karte mit `period: year` → Jahresverbrauch
+- **Energie-Dashboard**: Sensor direkt als Stromquelle eintragen
+
+Beispiel-Karte für monatlichen Vergleich:
+```yaml
+type: statistics-graph
+title: Stromverbrauch pro Monat
+entities:
+  - sensor.octopus_energy_deutschland_octopus_strom_zahlerstand
+stat_types:
+  - change
+period: month
+```
 
 ---
 
@@ -130,6 +122,13 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.6.0
+- **Breaking Change**: Sensor-Anzahl von 52 auf 11 reduziert — alle Einzel-Monatssensoren und aggregierten Tages/Wochen-Sensoren entfernt
+- Neu: **Octopus Strom Zählerstand** (`state_class: total`) als einzige Energiequelle für HA Long-Term Statistics → Tag/Monat/Jahr automatisch aus einem Sensor
+- Alte Sensor-Discovery-Einträge werden beim Start automatisch aus HA entfernt (leere MQTT-Payloads)
+- Dashboard `konto_uebersicht.yaml` und `rechnungen_karte.yaml` aktualisiert
+- GraphQL-Query vereinfacht (transactions und ledger entfernt)
 
 ### 0.5.18
 - Bugfix: Alle Kosten-Sensoren zeigten 0 — OEG API liefert keine Kostendaten in Measurements (`statistics` immer leer)

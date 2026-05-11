@@ -2,8 +2,6 @@
 #
 # Verwendung:
 #   HA Dashboard → Karte hinzufügen → YAML-Editor → diesen Inhalt einfügen
-#
-# Zeigt Kontostand, aktuellen Verbrauch/Kosten und letzte Rechnung auf einen Blick.
 
 type: entities
 title: Octopus Energy
@@ -18,40 +16,27 @@ entities:
     icon: mdi:alert-circle-outline
 
   - type: section
-    label: Verbrauch
-  - entity: sensor.octopus_energy_deutschland_octopus_strom_verbrauch_heute
-    name: Heute
-  - entity: sensor.octopus_energy_deutschland_octopus_strom_verbrauch_gestern
-    name: Gestern
-  - entity: sensor.octopus_energy_deutschland_octopus_strom_verbrauch_aktueller_monat
-    name: Aktueller Monat
-  - entity: sensor.octopus_energy_deutschland_octopus_strom_verbrauch_letzter_monat
-    name: Letzter Monat
+    label: Strom
+  - entity: sensor.octopus_energy_deutschland_octopus_strom_zahlerstand
+    name: Zählerstand (kumulativ)
+    icon: mdi:counter
+  - entity: sensor.octopus_energy_deutschland_octopus_arbeitspreis
+    name: Arbeitspreis
+    icon: mdi:tag
 
   - type: section
     label: Kosten
-  - entity: sensor.octopus_energy_deutschland_octopus_strom_kosten_heute
-    name: Heute
-  - entity: sensor.octopus_energy_deutschland_octopus_strom_kosten_gestern
-    name: Gestern
   - entity: sensor.octopus_energy_deutschland_octopus_strom_kosten_aktueller_monat
     name: Aktueller Monat
-  - entity: sensor.octopus_energy_deutschland_octopus_strom_kosten_letzter_monat
-    name: Letzter Monat
+  - entity: sensor.octopus_energy_deutschland_octopus_strom_kosten_aktuelles_jahr
+    name: Aktuelles Jahr
 
   - type: section
     label: Letzte Rechnung
   - entity: sensor.octopus_energy_deutschland_octopus_letzte_rechnung_brutto
-    name: Brutto
-  - entity: sensor.octopus_energy_deutschland_octopus_letzte_rechnung_netto
-    name: Netto
-  - entity: sensor.octopus_energy_deutschland_octopus_letzte_rechnung_von
-    name: Zeitraum Von
-  - entity: sensor.octopus_energy_deutschland_octopus_letzte_rechnung_bis
-    name: Zeitraum Bis
-  - entity: sensor.octopus_energy_deutschland_octopus_letzte_rechnung_pdf
-    name: PDF
-    icon: mdi:file-pdf-box
+    name: Betrag (Brutto)
+  - entity: sensor.octopus_energy_deutschland_octopus_letzte_rechnung_datum
+    name: Datum
 
   - type: section
     label: System

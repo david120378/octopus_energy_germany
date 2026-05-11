@@ -566,6 +566,10 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         lambda: client.get_measurements(days_back=400, frequency="DAY_INTERVAL"),
     )
     if measurements:
+        # DEBUG: log first measurement to inspect API structure
+        if measurements:
+            log.info("DEBUG measurement[0]: %s", json.dumps(measurements[0], default=str))
+
         # Consumption (kWh)
         p("consumption/today",        sum_kwh(measurements, today_str))
         p("consumption/yesterday",    sum_kwh(measurements, yesterday_str))

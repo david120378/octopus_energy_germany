@@ -335,7 +335,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.17",
+        "sw_version": "0.5.18",
     }
 
     sensors = [
@@ -560,23 +560,13 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             p(f"account/ledger/{ledger.get('ledgerType','').lower()}", round(ledger.get("balance", 0) / 100, 2))
         log.info("Kontodaten veröffentlicht. Kontostand: %.2f EUR", account.get("balance", 0) / 100)
 
-    # -- Measurements (consumption + cost) -----------------------------------
+    # -- Measurements (Verbrauch kWh; Kosten kommen aus Bills, nicht aus Measurements) --
     measurements = try_fetch(
         "Verbrauchsdaten",
         lambda: client.get_measurements(days_back=400, frequency="DAY_INTERVAL"),
     )
+    monthly = []  # wird unten befüllt, im Bills-Block benötigt
     if measurements:
-        # DEBUG: log cost field structure of most recent measurement
-        sample = measurements[-1]
-        meta = sample.get("metaData", {})
-        stats = meta.get("statistics", [])
-        log.info("DEBUG keys=%s startAt=%s value=%s", list(sample.keys()), sample.get("startAt"), sample.get("value"))
-        log.info("DEBUG metaData keys=%s statistics_count=%d", list(meta.keys()), len(stats))
-        if stats:
-            log.info("DEBUG stats[0]=%s", json.dumps(stats[0], default=str))
-        else:
-            log.info("DEBUG statistics leer – API liefert keine Kostendaten im Measurement!")
-
         # Consumption (kWh)
         p("consumption/today",        sum_kwh(measurements, today_str))
         p("consumption/yesterday",    sum_kwh(measurements, yesterday_str))
@@ -587,42 +577,21 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         p("consumption/current_year", sum_kwh(measurements, cur_year))
         p("consumption/last_year",    sum_kwh(measurements, last_year))
 
-        # Cost (EUR incl. tax)
-        p("cost/today",         sum_cost(measurements, today_str))
-        p("cost/yesterday",     sum_cost(measurements, yesterday_str))
-        p("cost/current_week",  sum_cost(measurements, cur_week))
-        p("cost/last_week",     sum_cost(measurements, last_week))
-        p("cost/current_month", sum_cost(measurements, cur_month))
-        p("cost/last_month",    sum_cost(measurements, last_month))
-        p("cost/current_year",  sum_cost(measurements, cur_year))
-        p("cost/last_year",     sum_cost(measurements, last_year))
-
-        # Monthly aggregates for current + last year (for year comparison cards)
-        monthly = []
+        # Monatliche kWh-Aggregate (Kosten werden im Bills-Block ergänzt)
         for yr in [last_year, cur_year]:
             for mo in range(1, 13):
                 ym = f"{yr}-{mo:02d}"
-                kwh = sum_kwh(measurements, ym)
-                cost = sum_cost(measurements, ym)
-                monthly.append({"month": ym, "kwh": kwh, "cost": cost})
-        p("consumption/monthly", {"months": monthly})
+                monthly.append({"month": ym, "kwh": sum_kwh(measurements, ym), "cost": 0})
 
-        # Individual sensors per month (for chart cards)
+        # Individuelle kWh-Sensoren pro Monat
         for item in monthly:
             p(f"consumption/monthly/{item['month']}", item['kwh'])
-            p(f"cost/monthly/{item['month']}", round(item['cost'], 4))
-
-        # Derive unit rate from today's cost/consumption if available
-        kwh_today = sum_kwh(measurements, today_str)
-        cost_today = sum_cost(measurements, today_str)
-        if kwh_today > 0:
-            p("tariff/unit_rate", round(cost_today / kwh_today, 4))
 
         log.info(
-            "Verbrauch: Heute %.3f kWh (%.2f EUR) | Monat %.3f kWh (%.2f EUR) | Jahr %.3f kWh (%.2f EUR)",
-            kwh_today, cost_today,
-            sum_kwh(measurements, cur_month), sum_cost(measurements, cur_month),
-            sum_kwh(measurements, cur_year), sum_cost(measurements, cur_year),
+            "Verbrauch: Heute %.3f kWh | Monat %.3f kWh | Jahr %.3f kWh",
+            sum_kwh(measurements, today_str),
+            sum_kwh(measurements, cur_month),
+            sum_kwh(measurements, cur_year),
         )
 
     # -- Payments ------------------------------------------------------------
@@ -693,6 +662,48 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
             p("bills/latest/pdf_url", {"url": raw_url, "filename": fname})
             log.info("Rechnungen veröffentlicht: %d Stück. Letzte: %.2f EUR",
                      len(recent_bills), charges.get("grossTotal", 0) / 100)
+
+        # -- Kostendaten aus Rechnungen (OEG API liefert keine Kosten in Measurements) --
+        bill_costs = {}  # YYYY-MM -> EUR (brutto, aus fromDate des Abrechnungszeitraums)
+        for bill in recent_bills:
+            from_key = bill.get("fromDate", "")[:7]
+            if from_key:
+                bill_costs[from_key] = round(bill.get("totalCharges", {}).get("grossTotal", 0) / 100, 2)
+
+        # Aggregierte Kosten-Sensoren
+        p("cost/current_month", bill_costs.get(cur_month, 0))
+        p("cost/last_month",    bill_costs.get(last_month, 0))
+        p("cost/current_year",  round(sum(v for k, v in bill_costs.items() if k.startswith(cur_year)), 2))
+        p("cost/last_year",     round(sum(v for k, v in bill_costs.items() if k.startswith(last_year)), 2))
+
+        # Individuelle monatliche Kosten-Sensoren
+        for ym, cost in bill_costs.items():
+            p(f"cost/monthly/{ym}", cost)
+
+        # Monatsverbrauch-JSON mit korrekten Kosten aktualisieren
+        if monthly:
+            monthly_with_costs = [{**item, "cost": bill_costs.get(item["month"], 0)} for item in monthly]
+            p("consumption/monthly", {"months": monthly_with_costs})
+
+        # Arbeitspreis aus letztem vollständigen Monat (Kosten / kWh)
+        lm_cost = bill_costs.get(last_month, 0)
+        lm_kwh = sum_kwh(measurements, last_month) if measurements else 0
+        if lm_kwh > 0 and lm_cost > 0:
+            unit_rate = round(lm_cost / lm_kwh, 4)
+            p("tariff/unit_rate", unit_rate)
+            # Tägliche/wöchentliche Kosten als Näherung (kWh × Arbeitspreis)
+            if measurements:
+                p("cost/today",        round(sum_kwh(measurements, today_str) * unit_rate, 2))
+                p("cost/yesterday",    round(sum_kwh(measurements, yesterday_str) * unit_rate, 2))
+                p("cost/current_week", round(sum_kwh(measurements, cur_week) * unit_rate, 2))
+                p("cost/last_week",    round(sum_kwh(measurements, last_week) * unit_rate, 2))
+
+        log.info(
+            "Kosten aus Rechnungen: Monat %s=%.2f EUR | Jahr %s=%.2f EUR | Arbeitspreis=%.4f EUR/kWh",
+            cur_month, bill_costs.get(cur_month, 0),
+            cur_year, round(sum(v for k, v in bill_costs.items() if k.startswith(cur_year)), 2),
+            lm_cost / lm_kwh if lm_kwh > 0 and lm_cost > 0 else 0,
+        )
 
     p("last_updated", now.isoformat())
     log.info("Abruf abgeschlossen.")

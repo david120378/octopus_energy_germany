@@ -133,6 +133,13 @@ Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
 
+### 0.5.18
+- Bugfix: Alle Kosten-Sensoren zeigten 0 — OEG API liefert keine Kostendaten in Measurements (`statistics` immer leer)
+- Kostendaten werden jetzt aus den **Rechnungen** (`totalCharges.grossTotal`) berechnet
+- `cost/monthly/YYYY-MM`, `cost/current_month`, `cost/last_month`, `cost/current_year`, `cost/last_year` korrekt befüllt
+- `tariff/unit_rate` aus letztem vollständigen Monat (Brutto-EUR / kWh)
+- Tägliche/wöchentliche Kosten als Näherung (kWh × Arbeitspreis)
+
 ### 0.5.16
 - Neu: `state_class: total` auf `current_month` / `last_month` / `current_year` / `last_year` Sensoren (Verbrauch + Kosten) — HA zeichnet ab sofort Long-Term-Statistics auf → `statistics-graph` Karte nutzbar
 - Neu: Plotly-Dashboard-Karten `jahresvergleich_verbrauch.yaml` und `jahresvergleich_kosten.yaml` — gruppierter Balkenvergleich Vorjahr vs. aktuelles Jahr (dynamisch, kein jährliches Anpassen nötig)

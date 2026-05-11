@@ -20,6 +20,12 @@ entities:
   - entity: sensor.octopus_energy_deutschland_octopus_strom_zahlerstand
     name: Zählerstand (kumulativ)
     icon: mdi:counter
+  - entity: sensor.octopus_energy_deutschland_octopus_verbrauch_monatlich
+    name: Verbrauch aktueller Monat (kWh)
+    icon: mdi:calendar-month
+  - entity: sensor.octopus_energy_deutschland_octopus_verbrauch_jahrlich
+    name: Verbrauch aktuelles Jahr (kWh)
+    icon: mdi:calendar
   - entity: sensor.octopus_energy_deutschland_octopus_arbeitspreis
     name: Arbeitspreis
     icon: mdi:tag

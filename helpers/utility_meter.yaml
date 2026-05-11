@@ -1,0 +1,35 @@
+# Octopus Energy – Utility Meter Helfer
+#
+# Diese Helfer berechnen den Stromverbrauch (kWh) automatisch
+# aus dem kumulativen Zählerstand-Sensor.
+#
+# Option A: Über HA-Oberfläche (empfohlen)
+#   Einstellungen → Geräte & Dienste → Helfer → + Helfer hinzufügen
+#   → Verbrauchszähler
+#
+#   Monatlich:
+#     Name:    Octopus Verbrauch Monatlich
+#     Quelle:  sensor.octopus_energy_deutschland_octopus_strom_zahlerstand
+#     Zyklus:  Monatlich
+#
+#   Jährlich:
+#     Name:    Octopus Verbrauch Jährlich
+#     Quelle:  sensor.octopus_energy_deutschland_octopus_strom_zahlerstand
+#     Zyklus:  Jährlich
+#
+# Option B: configuration.yaml
+#   Folgenden Block in configuration.yaml einfügen:
+#
+# utility_meter:
+#   octopus_verbrauch_monatlich:
+#     name: Octopus Verbrauch Monatlich
+#     source: sensor.octopus_energy_deutschland_octopus_strom_zahlerstand
+#     cycle: monthly
+#   octopus_verbrauch_jaehrlich:
+#     name: Octopus Verbrauch Jährlich
+#     source: sensor.octopus_energy_deutschland_octopus_strom_zahlerstand
+#     cycle: yearly
+#
+# Ergebnis:
+#   sensor.octopus_energy_deutschland_octopus_verbrauch_monatlich
+#   sensor.octopus_energy_deutschland_octopus_verbrauch_jahrlich

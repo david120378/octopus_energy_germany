@@ -68,9 +68,25 @@ Fertige Karten für das HA-Dashboard liegen im Ordner [`dashboard/`](dashboard/)
 | Datei | Beschreibung |
 |-------|-------------|
 | [`rechnungen_karte.yaml`](dashboard/rechnungen_karte.yaml) | Markdown-Karte: alle Rechnungen mit Monat und Bruttokosten |
-| [`konto_uebersicht.yaml`](dashboard/konto_uebersicht.yaml) | Entities-Karte: Kontostand, Zählerstand, Kosten, letzte Rechnung |
+| [`konto_uebersicht.yaml`](dashboard/konto_uebersicht.yaml) | Entities-Karte: Kontostand, Zählerstand, Monats-/Jahresverbrauch, Kosten, letzte Rechnung |
 
 **Verwendung:** HA Dashboard → Karte hinzufügen → ⋮ → YAML-Editor → Inhalt der Datei einfügen.
+
+---
+
+## Utility Meter Helfer (Monats-/Jahresverbrauch)
+
+Für automatisch rückgesetzte Verbrauchswerte werden zwei **Utility Meter**-Helfer benötigt.
+Die Konfiguration liegt im Ordner [`helpers/`](helpers/utility_meter.yaml).
+
+**Schnellstart:** HA → Einstellungen → Geräte & Dienste → Helfer → + Helfer hinzufügen → Verbrauchszähler
+
+| Helfer | Entity ID | Zyklus |
+|--------|-----------|--------|
+| Octopus Verbrauch Monatlich | `sensor.octopus_energy_deutschland_octopus_verbrauch_monatlich` | Monatlich (Reset am 1.) |
+| Octopus Verbrauch Jährlich | `sensor.octopus_energy_deutschland_octopus_verbrauch_jahrlich` | Jährlich (Reset am 1. Jan) |
+
+Quelle für beide: `sensor.octopus_energy_deutschland_octopus_strom_zahlerstand`
 
 ---
 
@@ -122,6 +138,10 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.6.1
+- Neu: Ordner `helpers/` mit Dokumentation der zwei **Utility Meter**-Helfer (Monats- und Jahresverbrauch)
+- Dashboard `konto_uebersicht.yaml` zeigt jetzt Monats- und Jahresverbrauch direkt aus den Utility-Meter-Sensoren
 
 ### 0.6.0
 - **Breaking Change**: Sensor-Anzahl von 52 auf 11 reduziert — alle Einzel-Monatssensoren und aggregierten Tages/Wochen-Sensoren entfernt

@@ -11,7 +11,7 @@
 
 type: custom:plotly-graph
 title: Jahresvergleich Stromkosten
-hours_to_show: 1
+hours_to_show: 0
 refresh_interval: 3600
 layout:
   barmode: group

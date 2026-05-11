@@ -48,6 +48,7 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/consumption/last_month` | Stromverbrauch letzter Monat (kWh) |
 | `octopus_energy/consumption/current_year` | Stromverbrauch aktuelles Jahr (kWh) |
 | `octopus_energy/consumption/last_year` | Stromverbrauch letztes Jahr (kWh) |
+| `octopus_energy/consumption/monthly/YYYY-MM` | Stromverbrauch je Monat (kWh, aktuelles + letztes Jahr) |
 
 ### Kosten (EUR inkl. MwSt)
 | Topic | Beschreibung |
@@ -60,6 +61,7 @@ Die Kontonummer findet sich im Octopus Energy Kundenportal. Format: `A-XXXX1234`
 | `octopus_energy/cost/last_month` | Stromkosten letzter Monat (EUR) |
 | `octopus_energy/cost/current_year` | Stromkosten aktuelles Jahr (EUR) |
 | `octopus_energy/cost/last_year` | Stromkosten letztes Jahr (EUR) |
+| `octopus_energy/cost/monthly/YYYY-MM` | Stromkosten je Monat (EUR, aktuelles + letztes Jahr) |
 | `octopus_energy/tariff/unit_rate` | Arbeitspreis (EUR/kWh, aus Verbrauchsdaten berechnet) |
 
 ### Rechnungen
@@ -128,6 +130,10 @@ Das Add-on nutzt die offizielle **OEG Kraken GraphQL API**:
 Dokumentation: [docs.oeg-kraken.energy](https://docs.oeg-kraken.energy/)
 
 ## Changelog
+
+### 0.5.15
+- Neu: 24 individuelle monatliche Kosten-Sensoren (`cost/monthly/YYYY-MM`, EUR) für aktuelles und letztes Jahr
+- Damit stehen jetzt für jeden Monat sowohl Verbrauch (kWh) als auch Kosten (EUR) als eigene HA-Sensoren zur Verfügung
 
 ### 0.5.14
 - Neu: Ordner `dashboard/` mit fertigen HA-Karten als YAML

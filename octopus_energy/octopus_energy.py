@@ -335,7 +335,7 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
         "name": "Octopus Energy Deutschland",
         "manufacturer": "Octopus Energy",
         "model": "OEG Kraken API",
-        "sw_version": "0.5.14",
+        "sw_version": "0.5.15",
     }
 
     sensors = [
@@ -427,6 +427,20 @@ def publish_ha_discovery(mqtt_pub: MQTTPublisher, topic_prefix: str) -> None:
                 "device_class": "energy",
                 "state_class": "total",
                 "icon": "mdi:lightning-bolt",
+            }
+            for yr in [datetime.now().year - 1, datetime.now().year]
+            for mo in range(1, 13)
+        ],
+        # Individual monthly cost sensors (current + last year)
+        *[
+            {
+                "name": f"Octopus Kosten {yr}-{mo:02d}",
+                "unique_id": f"octopus_cost_{yr}_{mo:02d}",
+                "state_topic": f"{topic_prefix}/cost/monthly/{yr}-{mo:02d}",
+                "unit_of_measurement": "EUR",
+                "device_class": "monetary",
+                "state_class": "total",
+                "icon": "mdi:currency-eur",
             }
             for yr in [datetime.now().year - 1, datetime.now().year]
             for mo in range(1, 13)
@@ -585,6 +599,7 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         # Individual sensors per month (for chart cards)
         for item in monthly:
             p(f"consumption/monthly/{item['month']}", item['kwh'])
+            p(f"cost/monthly/{item['month']}", round(item['cost'], 4))
 
         # Derive unit rate from today's cost/consumption if available
         kwh_today = sum_kwh(measurements, today_str)

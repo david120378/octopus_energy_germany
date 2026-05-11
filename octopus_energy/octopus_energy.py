@@ -566,9 +566,16 @@ def fetch_and_publish(client: OctopusEnergyClient, mqtt_pub: MQTTPublisher) -> N
         lambda: client.get_measurements(days_back=400, frequency="DAY_INTERVAL"),
     )
     if measurements:
-        # DEBUG: log first measurement to inspect API structure
-        if measurements:
-            log.info("DEBUG measurement[0]: %s", json.dumps(measurements[0], default=str))
+        # DEBUG: log cost field structure of most recent measurement
+        sample = measurements[-1]
+        meta = sample.get("metaData", {})
+        stats = meta.get("statistics", [])
+        log.info("DEBUG keys=%s startAt=%s value=%s", list(sample.keys()), sample.get("startAt"), sample.get("value"))
+        log.info("DEBUG metaData keys=%s statistics_count=%d", list(meta.keys()), len(stats))
+        if stats:
+            log.info("DEBUG stats[0]=%s", json.dumps(stats[0], default=str))
+        else:
+            log.info("DEBUG statistics leer – API liefert keine Kostendaten im Measurement!")
 
         # Consumption (kWh)
         p("consumption/today",        sum_kwh(measurements, today_str))

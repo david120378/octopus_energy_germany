@@ -3,15 +3,16 @@
 # Verwendung:
 #   HA Dashboard → Karte hinzufügen → YAML-Editor → diesen Inhalt einfügen
 #
-# Zeigt den monatlichen Verbrauch (kWh) als gruppierten Balkenvergleich
-# für das aktuelle und das vorherige Jahr.
-#
 # Benötigter Sensor: sensor.octopus_energy_deutschland_octopus_monatsverbrauch
+# Trigger-Sensor:    sensor.octopus_energy_deutschland_octopus_letzter_abruf
 # Voraussetzung: custom:plotly-graph (HACS) muss installiert sein.
+#
+# Strategie: Der "Letzter Abruf"-Sensor wird stündlich aktualisiert und hat
+# immer Daten im Zeitfenster. Im fn() lesen wir die Monatsdaten direkt aus
+# hass.states (aktueller Zustand, kein History-Abruf nötig).
 
 type: custom:plotly-graph
 title: Jahresvergleich Stromverbrauch
-hours_to_show: 0
 refresh_interval: 3600
 layout:
   barmode: group
@@ -30,34 +31,38 @@ layout:
     t: 40
     b: 60
 entities:
-  - entity: sensor.octopus_energy_deutschland_octopus_monatsverbrauch
-    name: Vorjahr
+  - entity: sensor.octopus_energy_deutschland_octopus_letzter_abruf
+    hours_to_show: 3
     type: bar
     marker:
       color: "#44739e"
       opacity: 0.85
     fn: >-
       ({ hass }) => {
-        const all = hass.states['sensor.octopus_energy_deutschland_octopus_monatsverbrauch']?.attributes?.months ?? [];
+        const state = hass.states['sensor.octopus_energy_deutschland_octopus_monatsverbrauch'];
+        const months = (state && state.attributes && Array.isArray(state.attributes.months))
+          ? state.attributes.months : [];
         const yr = String(new Date().getFullYear() - 1);
-        const d = all.filter(m => m.month.startsWith(yr));
+        const d = months.filter(m => m && m.month && m.month.startsWith(yr));
         return {
           name: yr,
           x: d.map(m => m.month.slice(5)),
           y: d.map(m => +(m.kwh || 0).toFixed(1))
         };
       }
-  - entity: sensor.octopus_energy_deutschland_octopus_monatsverbrauch
-    name: Aktuelles Jahr
+  - entity: sensor.octopus_energy_deutschland_octopus_letzter_abruf
+    hours_to_show: 3
     type: bar
     marker:
       color: "#f4a522"
       opacity: 0.85
     fn: >-
       ({ hass }) => {
-        const all = hass.states['sensor.octopus_energy_deutschland_octopus_monatsverbrauch']?.attributes?.months ?? [];
+        const state = hass.states['sensor.octopus_energy_deutschland_octopus_monatsverbrauch'];
+        const months = (state && state.attributes && Array.isArray(state.attributes.months))
+          ? state.attributes.months : [];
         const yr = String(new Date().getFullYear());
-        const d = all.filter(m => m.month.startsWith(yr));
+        const d = months.filter(m => m && m.month && m.month.startsWith(yr));
         return {
           name: yr,
           x: d.map(m => m.month.slice(5)),
